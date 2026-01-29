@@ -642,16 +642,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "parcel"
-version = "0.1.0"
-dependencies = [
- "include_dir",
- "log",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "parking_lot"
 version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1193,12 +1183,23 @@ dependencies = [
  "html2text",
  "imap",
  "mailparse",
- "parcel",
  "regex",
  "serde",
  "serde_json",
  "tracing",
  "tracing-subscriber",
+ "tracking-numbers",
+]
+
+[[package]]
+name = "tracking-numbers"
+version = "0.1.0"
+source = "git+ssh://git@github.com/richid/rs-tracking-numbers#f29fc8d74c1a7114a5eb56acba3213ad00631973"
+dependencies = [
+ "include_dir",
+ "log",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

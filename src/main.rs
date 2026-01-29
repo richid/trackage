@@ -14,7 +14,7 @@ use std::{
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
-use parcel::{track, Tracking};
+use tracking_numbers::{track};
 
 fn main() {
     tracing_subscriber::fmt()
