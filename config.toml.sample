@@ -1,0 +1,8 @@
+[email]
+server   = "imap.zombo.com"
+port     = 993
+username = "jimbo.jones@zombo.com"
+password = "zippity-doo-daa"
+folder   = "Packages"
+
+check_interval_seconds = 30
