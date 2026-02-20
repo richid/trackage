@@ -1,12 +1,21 @@
 use figment::{
-    providers::{Env, Format, Toml},
     Figment,
+    providers::{Env, Format, Toml},
 };
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub email: EmailConfig,
+
+    #[serde(default)]
+    pub database: DatabaseConfig,
+
+    #[serde(default)]
+    pub status: StatusPollerConfig,
+
+    #[serde(default)]
+    pub courier: CourierConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -23,6 +32,59 @@ pub struct EmailConfig {
     pub server: Option<String>,
     pub username: Option<String>,
     pub password: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DatabaseConfig {
+    #[serde(default = "default_db_path")]
+    pub path: String,
+}
+
+impl Default for DatabaseConfig {
+    fn default() -> Self {
+        Self {
+            path: default_db_path(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StatusPollerConfig {
+    #[serde(default = "default_status_check_interval")]
+    pub check_interval_seconds: u64,
+}
+
+impl Default for StatusPollerConfig {
+    fn default() -> Self {
+        Self {
+            check_interval_seconds: default_status_check_interval(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CourierConfig {
+    pub fedex: Option<FedexConfig>,
+}
+
+impl Default for CourierConfig {
+    fn default() -> Self {
+        Self { fedex: None }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FedexConfig {
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+fn default_status_check_interval() -> u64 {
+    3600
+}
+
+fn default_db_path() -> String {
+    "trackage.db".to_string()
 }
 
 fn default_check_interval() -> u64 {

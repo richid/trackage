@@ -1,11 +1,11 @@
 use crate::config::EmailConfig;
 use anyhow::{Context, Result};
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use tracing::info;
-//use imap::types::Fetch;
 
 #[derive(Debug)]
 pub struct MailMessage {
+    pub uid: u32,
     pub internal_date: DateTime<Utc>,
     pub headers: String,
     pub body: String,
@@ -13,7 +13,7 @@ pub struct MailMessage {
 
 #[derive(Debug)]
 pub struct ParsedMessage {
-    pub internal_date: chrono::DateTime<chrono::Utc>,
+    pub internal_date: DateTime<Utc>,
     pub subject: Option<String>,
     pub from: Option<String>,
     pub body_text: String,
@@ -47,54 +47,52 @@ impl ImapClient {
         Ok(Self { session })
     }
 
-    pub fn fetch_message_dates_since(
-        &mut self,
-        last_checked_at: u64,
-    ) -> Result<Vec<MailMessage>> {
-        let since_date = Utc
-            .timestamp_opt(last_checked_at as i64, 0)
-            .single()
-            .unwrap()
-            .format("%d-%b-%Y")
-            .to_string();
+    /// Fetch all messages with UIDs greater than `last_seen_uid`.
+    /// This catches newly delivered, moved, and copied messages regardless
+    /// of their internal date.
+    pub fn fetch_messages_since_uid(&mut self, last_seen_uid: u32) -> Result<Vec<MailMessage>> {
+        let search_range = format!("UID {}:*", last_seen_uid + 1);
 
-        info!(since = %since_date, "Searching for messages");
+        info!(since_uid = last_seen_uid + 1, "Searching for new messages");
 
-        let seq_nums = self
+        let uids = self
             .session
-            .uid_search(format!("SINCE {}", since_date))
-            .context("IMAP search failed")?;
+            .uid_search(search_range)
+            .context("IMAP UID search failed")?;
 
-        info!("Found messsages! {:?}", seq_nums);
+        // Filter out UIDs we've already seen (IMAP `UID x:*` always includes
+        // at least the highest existing UID even if it's <= x)
+        let new_uids: Vec<u32> = uids.into_iter().filter(|&uid| uid > last_seen_uid).collect();
 
-        if seq_nums.is_empty() {
+        info!(count = new_uids.len(), "New messages found");
+
+        if new_uids.is_empty() {
             return Ok(vec![]);
         }
 
+        let uid_list = new_uids
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(",");
+
         let fetches = self
             .session
-            .fetch(
-                seq_nums
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join(","),
-                "(RFC822.HEADER RFC822 INTERNALDATE)",
-            )
+            .uid_fetch(uid_list, "(BODY.PEEK[HEADER] BODY.PEEK[] INTERNALDATE)")
             .context("IMAP fetch failed")?;
 
         let mut messages = Vec::new();
 
         for msg in fetches.iter() {
+            let uid = match msg.uid {
+                Some(uid) => uid,
+                None => continue,
+            };
+
             let internal_date = match msg.internal_date() {
                 Some(d) => d.with_timezone(&Utc),
                 None => continue,
             };
-
-            if internal_date.timestamp() as u64 <= last_checked_at {
-                info!("skibbidi");
-                continue
-            }
 
             let headers = msg
                 .header()
@@ -109,63 +107,15 @@ impl ImapClient {
                 .to_string();
 
             messages.push(MailMessage {
+                uid,
                 internal_date,
                 headers,
-                body
+                body,
             });
         }
 
         Ok(messages)
     }
-
-    /// Fetch message INTERNALDATE values since the given UNIX timestamp
-    /*
-    pub fn fetch_message_dates_since(
-        &mut self,
-        last_checked_at: u64,
-    ) -> Result<Vec<u64>> {
-        let since_date = Utc
-            .timestamp_opt(last_checked_at as i64, 0)
-            .single()
-            .unwrap()
-            .format("%d-%b-%Y")
-            .to_string();
-
-        info!(since = %since_date, "Searching for messages");
-
-        let seq_nums = self
-            .session
-            .search(format!("SINCE {}", since_date))
-            .context("IMAP search failed")?;
-
-        if seq_nums.is_empty() {
-            return Ok(vec![]);
-        }
-
-        let fetches = self
-            .session
-            .fetch(
-                seq_nums
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join(","),
-                "INTERNALDATE",
-            )
-            .context("IMAP fetch failed")?;
-
-        let mut timestamps = Vec::new();
-
-        for msg in fetches.iter() {
-            if let Some(date) = msg.internal_date() {
-                let dt: DateTime<Utc> = date.into();
-                timestamps.push(dt.timestamp() as u64);
-            }
-        }
-
-        Ok(timestamps)
-    }
-    */
 
     pub fn logout(mut self) -> Result<()> {
         info!("Closing IMAP server connection");
@@ -174,8 +124,7 @@ impl ImapClient {
     }
 }
 
-// Split to new crate
-use mailparse::{parse_mail, ParsedMail};
+use mailparse::{ParsedMail, parse_mail};
 
 fn extract_text_from_part(part: &ParsedMail) -> Option<String> {
     let ctype = part.ctype.mimetype.to_lowercase();

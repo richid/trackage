@@ -22,4 +22,5 @@ target
 
 # Application
 config.toml
-state.json
+*.db
+*.db-*
