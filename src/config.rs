@@ -65,16 +65,34 @@ impl Default for StatusPollerConfig {
 #[derive(Debug, Deserialize)]
 pub struct CourierConfig {
     pub fedex: Option<FedexConfig>,
+    pub ups: Option<UpsConfig>,
+    pub usps: Option<UspsConfig>,
 }
 
 impl Default for CourierConfig {
     fn default() -> Self {
-        Self { fedex: None }
+        Self {
+            fedex: None,
+            ups: None,
+            usps: None,
+        }
     }
 }
 
 #[derive(Debug, Deserialize)]
 pub struct FedexConfig {
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpsConfig {
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UspsConfig {
     pub client_id: String,
     pub client_secret: String,
 }

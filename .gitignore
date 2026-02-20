@@ -24,3 +24,6 @@ target
 config.toml
 *.db
 *.db-*
+
+# AI Overlords
+.claude/

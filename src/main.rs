@@ -78,7 +78,15 @@ fn main() {
     let mut router = courier::CourierRouter::new();
     if let Some(ref fedex_config) = config.courier.fedex {
         info!("FedEx courier client enabled");
-        router.register("FedEx", Box::new(courier::fedex::FedexClient::new(fedex_config)));
+        router.register(&courier::CourierCode::FedEx, Box::new(courier::fedex::FedexClient::new(fedex_config)));
+    }
+    if let Some(ref ups_config) = config.courier.ups {
+        info!("UPS courier client enabled");
+        router.register(&courier::CourierCode::UPS, Box::new(courier::ups::UpsClient::new(ups_config)));
+    }
+    if let Some(ref usps_config) = config.courier.usps {
+        info!("USPS courier client enabled");
+        router.register(&courier::CourierCode::USPS, Box::new(courier::usps::UspsClient::new(usps_config)));
     }
 
     let status_poller = status_poller::StatusPoller::new(

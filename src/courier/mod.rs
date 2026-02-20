@@ -1,8 +1,12 @@
 pub mod fedex;
+pub mod ups;
+pub mod usps;
 
 use crate::db::Package;
 use anyhow::Result;
 use std::collections::HashMap;
+use std::fmt;
+use std::str::FromStr;
 use tracing::debug;
 
 pub trait CourierClient: Send {
@@ -20,8 +24,8 @@ impl CourierRouter {
         }
     }
 
-    pub fn register(&mut self, courier: &str, client: Box<dyn CourierClient>) {
-        self.clients.insert(courier.to_string(), client);
+    pub fn register(&mut self, courier_code: &CourierCode, client: Box<dyn CourierClient>) {
+        self.clients.insert(courier_code.to_string(), client);
     }
 }
 
@@ -37,6 +41,36 @@ impl CourierClient for CourierRouter {
                 );
                 Ok(None)
             }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CourierCode {
+    FedEx,
+    UPS,
+    USPS,
+}
+
+impl fmt::Display for CourierCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CourierCode::FedEx => write!(f, "fedex"),
+            CourierCode::UPS => write!(f, "ups"),
+            CourierCode::USPS => write!(f, "usps"),
+        }
+    }
+}
+
+impl FromStr for CourierCode {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "fedex" => Ok(CourierCode::FedEx),
+            "ups"   => Ok(CourierCode::UPS),
+            "usps"  => Ok(CourierCode::USPS),
+            other   => Err(anyhow::anyhow!("Unknown courier code: {other}")),
         }
     }
 }

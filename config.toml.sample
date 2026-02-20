@@ -1,8 +1,8 @@
 [email]
 server   = "imap.zombo.com"
 port     = 993
-username = "jimbo.jones@zombo.com"
-password = "zippity-doo-daa"
+username = "<your-email-address>"
+password = "<your-email-password>"
 folder   = "Packages"
 
 check_interval_seconds = 30
@@ -10,3 +10,11 @@ check_interval_seconds = 30
 [courier.fedex]
 client_id = "your-fedex-client-id"
 client_secret = "your-fedex-client-secret"
+
+[courier.ups]
+client_id = "your-ups-client-id"
+client_secret = "your-ups-client-secret"
+
+[courier.usps]
+client_id = "your-usps-consumer-key"
+client_secret = "your-usps-consumer-secret"
