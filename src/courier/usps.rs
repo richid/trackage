@@ -1,4 +1,4 @@
-use super::CourierClient;
+use super::{CourierClient, CourierStatus};
 use crate::config::UspsConfig;
 use crate::db::Package;
 use anyhow::{Context, Result};
@@ -86,7 +86,7 @@ impl UspsClient {
 }
 
 impl CourierClient for UspsClient {
-    fn check_status(&self, package: &Package) -> Result<Option<String>> {
+    fn check_status(&self, package: &Package) -> Result<Option<CourierStatus>> {
         let token = self.get_token()?;
 
         let url = format!("{TRACK_URL}{}", package.tracking_number);
@@ -119,13 +119,36 @@ impl CourierClient for UspsClient {
         match status_category {
             Some(category) => {
                 let mapped = Self::map_status_category(category);
+
+                // Extract expected delivery date
+                let estimated_arrival_date = body["expectedDeliveryDate"]
+                    .as_str()
+                    .map(|s| s.to_string());
+
+                // Extract last known location from most recent tracking event
+                let last_known_location = body["trackingEvents"]
+                    .as_array()
+                    .and_then(|events| events.first())
+                    .and_then(|event| {
+                        event["eventCity"].as_str().map(|city| {
+                            match event["eventState"].as_str() {
+                                Some(state) => format!("{city}, {state}"),
+                                None => city.to_string(),
+                            }
+                        })
+                    });
+
                 debug!(
                     tracking_number = %package.tracking_number,
                     usps_category = category,
                     mapped_status = mapped,
                     "USPS status retrieved"
                 );
-                Ok(Some(mapped.to_string()))
+                Ok(Some(CourierStatus {
+                    status: mapped.to_string(),
+                    estimated_arrival_date,
+                    last_known_location,
+                }))
             }
             None => {
                 debug!(

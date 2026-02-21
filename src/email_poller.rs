@@ -1,4 +1,5 @@
 use crate::config::EmailConfig;
+use crate::courier::CourierCode;
 use crate::db::{Database, NewPackage};
 use crate::extractors;
 use crate::imap_client::{ImapClient, MailMessage, parse_message};
@@ -21,6 +22,8 @@ impl EmailPoller {
 
     /// Run the poll loop. Blocks until the shutdown signal fires.
     pub fn run(mut self) {
+        info!("Email poller starting");
+
         while self.running.load(Ordering::SeqCst) {
             self.poll_once();
             self.sleep();
@@ -100,16 +103,28 @@ impl EmailPoller {
         let results = extractors::extract_tracking_numbers(&parsed.body_text);
 
         for result in &results {
+            let courier = match result.courier.parse::<CourierCode>() {
+                Ok(code) => code.to_string(),
+                Err(_) => {
+                    debug!(
+                        tracking_number = %result.tracking_number,
+                        courier = %result.courier,
+                        "Unknown courier, storing raw name"
+                    );
+                    result.courier.clone()
+                }
+            };
+
             info!(
                 tracking_number = %result.tracking_number,
-                courier = %result.courier,
+                courier = %courier,
                 service = %result.service,
                 "Validated tracking number"
             );
 
             let new_package = NewPackage {
                 tracking_number: result.tracking_number.clone(),
-                courier: result.courier.clone(),
+                courier,
                 service: result.service.clone(),
                 source_email_uid: msg.uid,
                 source_email_subject: parsed.subject.clone(),

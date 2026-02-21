@@ -150,30 +150,91 @@ pub fn validate(config: &Config) -> Result<(), String> {
     Ok(())
 }
 
-/// A sanitized view of EmailConfig safe for logging
+const MASKED: &str = "******";
+const NOT_SET: &str = "<not set>";
+
+fn mask_option(opt: &Option<String>) -> &'static str {
+    if opt.is_some() { MASKED } else { NOT_SET }
+}
+
+/// A sanitized view of the full configuration, safe for logging.
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct SanitizedConfig {
+    pub email: SanitizedEmailConfig,
+    pub database: SanitizedDatabaseConfig,
+    pub status: SanitizedStatusPollerConfig,
+    pub courier: SanitizedCourierConfig,
+}
+
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct SanitizedEmailConfig {
-    pub check_interval_seconds: u64,
-    pub port: u16,
-    pub folder: String,
     pub server: String,
+    pub port: u16,
     pub username: String,
-    pub password: String,
+    pub password: &'static str,
+    pub folder: String,
+    pub check_interval_seconds: u64,
 }
 
-impl EmailConfig {
-    pub fn sanitized_for_log(&self) -> SanitizedEmailConfig {
-        SanitizedEmailConfig {
-            check_interval_seconds: self.check_interval_seconds,
-            port: self.port,
-            folder: self.folder.clone(),
-            server: self.server.clone().unwrap_or_else(|| "<not set>".into()),
-            username: self.username.clone().unwrap_or_else(|| "<not set>".into()),
-            password: if self.password.is_some() {
-                "******".into()
-            } else {
-                "<not set>".into()
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct SanitizedDatabaseConfig {
+    pub path: String,
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct SanitizedStatusPollerConfig {
+    pub check_interval_seconds: u64,
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct SanitizedCourierConfig {
+    pub fedex: Option<SanitizedCourierCredentials>,
+    pub ups: Option<SanitizedCourierCredentials>,
+    pub usps: Option<SanitizedCourierCredentials>,
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct SanitizedCourierCredentials {
+    pub client_id: String,
+    pub client_secret: &'static str,
+}
+
+impl Config {
+    pub fn sanitized_for_log(&self) -> SanitizedConfig {
+        SanitizedConfig {
+            email: SanitizedEmailConfig {
+                server: self.email.server.clone().unwrap_or_else(|| NOT_SET.into()),
+                port: self.email.port,
+                username: self.email.username.clone().unwrap_or_else(|| NOT_SET.into()),
+                password: mask_option(&self.email.password),
+                folder: self.email.folder.clone(),
+                check_interval_seconds: self.email.check_interval_seconds,
+            },
+            database: SanitizedDatabaseConfig {
+                path: self.database.path.clone(),
+            },
+            status: SanitizedStatusPollerConfig {
+                check_interval_seconds: self.status.check_interval_seconds,
+            },
+            courier: SanitizedCourierConfig {
+                fedex: self.courier.fedex.as_ref().map(|c| SanitizedCourierCredentials {
+                    client_id: c.client_id.clone(),
+                    client_secret: MASKED,
+                }),
+                ups: self.courier.ups.as_ref().map(|c| SanitizedCourierCredentials {
+                    client_id: c.client_id.clone(),
+                    client_secret: MASKED,
+                }),
+                usps: self.courier.usps.as_ref().map(|c| SanitizedCourierCredentials {
+                    client_id: c.client_id.clone(),
+                    client_secret: MASKED,
+                }),
             },
         }
     }

@@ -1,4 +1,4 @@
-use super::CourierClient;
+use super::{CourierClient, CourierStatus};
 use crate::config::FedexConfig;
 use crate::db::Package;
 use anyhow::{Context, Result};
@@ -7,8 +7,8 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tracing::{debug, warn};
 
-const TOKEN_URL: &str = "https://apis.fedex.com/oauth/token";
-const TRACK_URL: &str = "https://apis.fedex.com/track/v1/trackingnumbers";
+const TOKEN_URL: &str = "https://apis-sandbox.fedex.com/oauth/token";
+const TRACK_URL: &str = "https://apis-sandbox.fedex.com/track/v1/trackingnumbers";
 
 pub struct FedexClient {
     client_id: String,
@@ -85,7 +85,7 @@ impl FedexClient {
 }
 
 impl CourierClient for FedexClient {
-    fn check_status(&self, package: &Package) -> Result<Option<String>> {
+    fn check_status(&self, package: &Package) -> Result<Option<CourierStatus>> {
         let token = self.get_token()?;
 
         let request_body = json!({
@@ -129,13 +129,38 @@ impl CourierClient for FedexClient {
         match status_code {
             Some(code) => {
                 let mapped = Self::map_status_code(code);
+
+                // Extract estimated delivery from dateAndTimes array
+                let estimated_arrival_date = track_result["dateAndTimes"]
+                    .as_array()
+                    .and_then(|dates| {
+                        dates.iter().find(|d| {
+                            d["type"].as_str() == Some("ESTIMATED_DELIVERY")
+                        })
+                    })
+                    .and_then(|d| d["dateTime"].as_str())
+                    .map(|s| s.to_string());
+
+                // Extract last known location from latestStatusDetail.scanLocation
+                let scan_location = &track_result["latestStatusDetail"]["scanLocation"];
+                let last_known_location = scan_location["city"].as_str().map(|city| {
+                    match scan_location["stateOrProvinceCode"].as_str() {
+                        Some(state) => format!("{city}, {state}"),
+                        None => city.to_string(),
+                    }
+                });
+
                 debug!(
                     tracking_number = %package.tracking_number,
                     fedex_code = code,
                     mapped_status = mapped,
                     "FedEx status retrieved"
                 );
-                Ok(Some(mapped.to_string()))
+                Ok(Some(CourierStatus {
+                    status: mapped.to_string(),
+                    estimated_arrival_date,
+                    last_known_location,
+                }))
             }
             None => {
                 debug!(

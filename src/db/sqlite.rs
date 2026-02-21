@@ -1,4 +1,5 @@
 use super::{Database, NewPackage, Package, PackageStatus};
+use crate::courier::CourierCode;
 use anyhow::{Context, Result};
 use rusqlite::Connection;
 use std::str::FromStr;
@@ -26,6 +27,7 @@ impl SqliteDatabase {
         const MIGRATIONS: &[&str] = &[
             include_str!("../../migrations/0001_create_packages_and_metadata.sql"),
             include_str!("../../migrations/0002_create_package_status.sql"),
+            include_str!("../../migrations/0003_add_eta_and_location.sql"),
         ];
 
         let version: u32 = self
@@ -143,6 +145,10 @@ impl Database for SqliteDatabase {
             .map(|(id, tracking_number, courier, service, status_str)| {
                 let status = PackageStatus::from_str(&status_str)
                     .with_context(|| format!("Invalid status '{status_str}' for package {id}"))?;
+                let courier = courier
+                    .parse::<CourierCode>()
+                    .map(|c| c.to_string())
+                    .unwrap_or(courier);
                 Ok(Package {
                     id,
                     tracking_number,
@@ -154,11 +160,23 @@ impl Database for SqliteDatabase {
             .collect()
     }
 
-    fn insert_package_status(&mut self, package_id: i64, status: &PackageStatus) -> Result<()> {
+    fn insert_package_status(
+        &mut self,
+        package_id: i64,
+        status: &PackageStatus,
+        estimated_arrival_date: Option<&str>,
+        last_known_location: Option<&str>,
+    ) -> Result<()> {
         self.conn
             .execute(
-                "INSERT INTO package_status (package_id, status) VALUES (?1, ?2)",
-                rusqlite::params![package_id, status.to_string()],
+                "INSERT INTO package_status (package_id, status, estimated_arrival_date, last_known_location)
+                 VALUES (?1, ?2, ?3, ?4)",
+                rusqlite::params![
+                    package_id,
+                    status.to_string(),
+                    estimated_arrival_date,
+                    last_known_location,
+                ],
             )
             .context("Failed to insert package status")?;
 

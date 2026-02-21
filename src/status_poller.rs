@@ -32,6 +32,8 @@ impl StatusPoller {
 
     /// Run the poll loop. Blocks until the shutdown signal fires.
     pub fn run(mut self) {
+        info!("Status poller starting");
+
         while self.running.load(Ordering::SeqCst) {
             self.poll_once();
             self.sleep();
@@ -74,21 +76,21 @@ impl StatusPoller {
             }
         };
 
-        let Some(status_str) = result else {
-            debug!(
+        let Some(courier_status) = result else {
+            info!(
                 tracking_number = %package.tracking_number,
                 "No status update available"
             );
             return;
         };
 
-        let status = match PackageStatus::from_str(&status_str) {
+        let status = match PackageStatus::from_str(&courier_status.status) {
             Ok(s) => s,
             Err(err) => {
                 error!(
                     error = %err,
                     tracking_number = %package.tracking_number,
-                    status = %status_str,
+                    status = %courier_status.status,
                     "Invalid status from courier"
                 );
                 return;
@@ -102,9 +104,19 @@ impl StatusPoller {
                 new_status = %status,
                 "Package status changed"
             );
+        } else {
+            info!(
+                tracking_number = %package.tracking_number,
+                "Updating status information"
+            );
         }
 
-        if let Err(err) = self.db.insert_package_status(package.id, &status) {
+        if let Err(err) = self.db.insert_package_status(
+            package.id,
+            &status,
+            courier_status.estimated_arrival_date.as_deref(),
+            courier_status.last_known_location.as_deref(),
+        ) {
             error!(
                 error = %err,
                 tracking_number = %package.tracking_number,

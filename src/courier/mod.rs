@@ -7,10 +7,16 @@ use anyhow::Result;
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
-use tracing::debug;
+use tracing::warn;
+
+pub struct CourierStatus {
+    pub status: String,
+    pub estimated_arrival_date: Option<String>,
+    pub last_known_location: Option<String>,
+}
 
 pub trait CourierClient: Send {
-    fn check_status(&self, package: &Package) -> Result<Option<String>>;
+    fn check_status(&self, package: &Package) -> Result<Option<CourierStatus>>;
 }
 
 pub struct CourierRouter {
@@ -30,14 +36,14 @@ impl CourierRouter {
 }
 
 impl CourierClient for CourierRouter {
-    fn check_status(&self, package: &Package) -> Result<Option<String>> {
+    fn check_status(&self, package: &Package) -> Result<Option<CourierStatus>> {
         match self.clients.get(&package.courier) {
             Some(client) => client.check_status(package),
             None => {
-                debug!(
+                warn!(
                     courier = %package.courier,
                     tracking_number = %package.tracking_number,
-                    "No courier client registered for this courier"
+                    "No client registered for this courier"
                 );
                 Ok(None)
             }
@@ -56,8 +62,8 @@ impl fmt::Display for CourierCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CourierCode::FedEx => write!(f, "fedex"),
-            CourierCode::UPS => write!(f, "ups"),
-            CourierCode::USPS => write!(f, "usps"),
+            CourierCode::UPS   => write!(f, "ups"),
+            CourierCode::USPS  => write!(f, "usps"),
         }
     }
 }
@@ -67,10 +73,10 @@ impl FromStr for CourierCode {
 
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "fedex" => Ok(CourierCode::FedEx),
-            "ups"   => Ok(CourierCode::UPS),
-            "usps"  => Ok(CourierCode::USPS),
-            other   => Err(anyhow::anyhow!("Unknown courier code: {other}")),
+            "fedex" | "FedEx" => Ok(CourierCode::FedEx),
+            "ups"   | "UPS" => Ok(CourierCode::UPS),
+            "usps"  | "United States Postal Service" => Ok(CourierCode::USPS),
+            other => Err(anyhow::anyhow!("Unknown courier code: {other}")),
         }
     }
 }

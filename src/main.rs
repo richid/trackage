@@ -21,6 +21,8 @@ fn main() {
         )
         .init();
 
+    info!("trackage starting");
+
     let config = config_load();
 
     if let Err(err) = config_validate(&config) {
@@ -28,11 +30,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    info!(
-        email_config = ?config.email.sanitized_for_log(),
-        db_path = %config.database.path,
-        "Effective configuration loaded"
-    );
+    info!(config = ?config.sanitized_for_log(), "Effective configuration");
 
     let email_db = match db::SqliteDatabase::open(&config.database.path) {
         Ok(db) => db,
@@ -58,12 +56,6 @@ fn main() {
         running_signal.store(false, Ordering::SeqCst);
     })
     .expect("Error setting Ctrl-C handler");
-
-    info!(
-        email_check_interval = config.email.check_interval_seconds,
-        status_check_interval = config.status.check_interval_seconds,
-        "trackage starting"
-    );
 
     let email_poller = email_poller::EmailPoller::new(
         config.email,

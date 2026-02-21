@@ -70,5 +70,11 @@ pub trait Database: Send {
     fn get_active_packages(&self) -> Result<Vec<Package>>;
 
     /// Insert a status check record into package_status history.
-    fn insert_package_status(&mut self, package_id: i64, status: &PackageStatus) -> Result<()>;
+    fn insert_package_status(
+        &mut self,
+        package_id: i64,
+        status: &PackageStatus,
+        estimated_arrival_date: Option<&str>,
+        last_known_location: Option<&str>,
+    ) -> Result<()>;
 }
