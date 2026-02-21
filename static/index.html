@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trackage</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f5f5f5; color: #333; }
+.container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+h1 { font-size: 1.5rem; font-weight: 600; }
+.toolbar { display: flex; align-items: center; gap: 12px; margin: 20px 0 12px; flex-wrap: wrap; }
+.toolbar select, .toolbar button {
+  padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px;
+  background: #fff; font-size: 0.875rem; cursor: pointer;
+}
+.toolbar button:hover { background: #eee; }
+.table-wrap { overflow-x: auto; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+table { width: 100%; border-collapse: collapse; background: #fff; font-size: 0.875rem; }
+th, td { text-align: left; padding: 10px 14px; white-space: nowrap; }
+th {
+  background: #fafafa; border-bottom: 2px solid #e0e0e0;
+  cursor: pointer; user-select: none; position: relative;
+}
+th:hover { background: #f0f0f0; }
+th .arrow { margin-left: 4px; font-size: 0.7rem; color: #999; }
+th.active .arrow { color: #333; }
+tr:not(:last-child) td { border-bottom: 1px solid #eee; }
+tr:hover td { background: #f9f9f9; }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 0.75rem; font-weight: 600; text-transform: capitalize;
+}
+.badge-waiting { background: #e0e0e0; color: #555; }
+.badge-in_transit { background: #d0e8ff; color: #1a5fa0; }
+.badge-delivered { background: #d4edda; color: #1e7e34; }
+.empty { text-align: center; padding: 48px 16px; color: #888; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Trackage</h1>
+  <div class="toolbar">
+    <select id="statusFilter">
+      <option value="">All Statuses</option>
+      <option value="waiting">Waiting</option>
+      <option value="in_transit">In Transit</option>
+      <option value="delivered">Delivered</option>
+    </select>
+    <button id="refreshBtn">Refresh</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th data-col="tracking_number">Tracking Number <span class="arrow"></span></th>
+          <th data-col="courier">Courier <span class="arrow"></span></th>
+          <th data-col="status">Status <span class="arrow"></span></th>
+          <th data-col="estimated_arrival_date">Est. Arrival <span class="arrow"></span></th>
+          <th data-col="last_known_location">Last Location <span class="arrow"></span></th>
+          <th data-col="created_at">Created <span class="arrow"></span></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="empty" style="display:none">No packages found.</div>
+</div>
+<script>
+(function() {
+  let packages = [];
+  let sortCol = 'created_at';
+  let sortAsc = false;
+
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+  const filter = document.getElementById('statusFilter');
+
+  filter.addEventListener('change', render);
+  document.getElementById('refreshBtn').addEventListener('click', load);
+
+  document.querySelectorAll('th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (sortCol === col) { sortAsc = !sortAsc; }
+      else { sortCol = col; sortAsc = true; }
+      render();
+    });
+  });
+
+  function badgeClass(s) {
+    if (s === 'delivered') return 'badge-delivered';
+    if (s === 'in_transit') return 'badge-in_transit';
+    return 'badge-waiting';
+  }
+
+  function statusLabel(s) {
+    if (s === 'in_transit') return 'In Transit';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function esc(str) {
+    if (str == null) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function render() {
+    const f = filter.value;
+    let data = f ? packages.filter(p => p.status === f) : packages.slice();
+
+    data.sort((a, b) => {
+      let va = a[sortCol] ?? '';
+      let vb = b[sortCol] ?? '';
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      if (va < vb) return sortAsc ? -1 : 1;
+      if (va > vb) return sortAsc ? 1 : -1;
+      return 0;
+    });
+
+    // Update sort arrows
+    document.querySelectorAll('th[data-col]').forEach(th => {
+      const arrow = th.querySelector('.arrow');
+      if (th.dataset.col === sortCol) {
+        th.classList.add('active');
+        arrow.textContent = sortAsc ? '\u25B2' : '\u25BC';
+      } else {
+        th.classList.remove('active');
+        arrow.textContent = '';
+      }
+    });
+
+    if (data.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = '';
+      return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = data.map(p => `<tr>
+      <td>${esc(p.tracking_number)}</td>
+      <td>${esc(p.courier)}</td>
+      <td><span class="badge ${badgeClass(p.status)}">${statusLabel(p.status)}</span></td>
+      <td>${esc(p.estimated_arrival_date)}</td>
+      <td>${esc(p.last_known_location)}</td>
+      <td>${esc(p.created_at)}</td>
+    </tr>`).join('');
+  }
+
+  function load() {
+    fetch('/api/packages')
+      .then(r => r.json())
+      .then(data => { packages = data; render(); })
+      .catch(err => console.error('Failed to load packages:', err));
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

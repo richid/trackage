@@ -16,6 +16,9 @@ pub struct Config {
 
     #[serde(default)]
     pub courier: CourierConfig,
+
+    #[serde(default)]
+    pub web: WebConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -97,6 +100,28 @@ pub struct UspsConfig {
     pub client_secret: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct WebConfig {
+    #[serde(default)]
+    pub enabled: bool,
+
+    #[serde(default = "default_web_port")]
+    pub port: u16,
+}
+
+impl Default for WebConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            port: default_web_port(),
+        }
+    }
+}
+
+fn default_web_port() -> u16 {
+    3000
+}
+
 fn default_status_check_interval() -> u64 {
     3600
 }
@@ -165,6 +190,7 @@ pub struct SanitizedConfig {
     pub database: SanitizedDatabaseConfig,
     pub status: SanitizedStatusPollerConfig,
     pub courier: SanitizedCourierConfig,
+    pub web: SanitizedWebConfig,
 }
 
 #[derive(Debug)]
@@ -205,6 +231,13 @@ pub struct SanitizedCourierCredentials {
     pub client_secret: &'static str,
 }
 
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct SanitizedWebConfig {
+    pub enabled: bool,
+    pub port: u16,
+}
+
 impl Config {
     pub fn sanitized_for_log(&self) -> SanitizedConfig {
         SanitizedConfig {
@@ -235,6 +268,10 @@ impl Config {
                     client_id: c.client_id.clone(),
                     client_secret: MASKED,
                 }),
+            },
+            web: SanitizedWebConfig {
+                enabled: self.web.enabled,
+                port: self.web.port,
             },
         }
     }

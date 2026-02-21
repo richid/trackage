@@ -18,3 +18,7 @@ client_secret = "your-ups-client-secret"
 [courier.usps]
 client_id = "your-usps-consumer-key"
 client_secret = "your-usps-consumer-secret"
+
+[web]
+enabled = false
+port = 3000

@@ -1,4 +1,4 @@
-use super::{Database, NewPackage, Package, PackageStatus};
+use super::{Database, NewPackage, Package, PackageStatus, PackageWithStatus};
 use crate::courier::CourierCode;
 use anyhow::{Context, Result};
 use rusqlite::Connection;
@@ -158,6 +158,45 @@ impl Database for SqliteDatabase {
                 })
             })
             .collect()
+    }
+
+    fn get_all_packages_with_status(&self) -> Result<Vec<PackageWithStatus>> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT p.id, p.tracking_number, p.courier, p.service,
+                        COALESCE(ps.status, 'waiting') AS status,
+                        ps.estimated_arrival_date,
+                        ps.last_known_location,
+                        p.created_at
+                 FROM packages p
+                 LEFT JOIN package_status ps ON ps.id = (
+                     SELECT ps2.id FROM package_status ps2
+                     WHERE ps2.package_id = p.id
+                     ORDER BY ps2.id DESC LIMIT 1
+                 )
+                 ORDER BY p.created_at DESC",
+            )
+            .context("Failed to prepare get_all_packages_with_status query")?;
+
+        let packages = stmt
+            .query_map([], |row| {
+                Ok(PackageWithStatus {
+                    id: row.get(0)?,
+                    tracking_number: row.get(1)?,
+                    courier: row.get(2)?,
+                    service: row.get(3)?,
+                    status: row.get(4)?,
+                    estimated_arrival_date: row.get(5)?,
+                    last_known_location: row.get(6)?,
+                    created_at: row.get(7)?,
+                })
+            })
+            .context("Failed to query packages with status")?
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .context("Failed to read packages with status rows")?;
+
+        Ok(packages)
     }
 
     fn insert_package_status(

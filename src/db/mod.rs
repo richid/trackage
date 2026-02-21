@@ -4,6 +4,7 @@ pub use sqlite::SqliteDatabase;
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 use std::fmt;
 use std::str::FromStr;
 
@@ -45,6 +46,18 @@ pub struct Package {
     pub status: PackageStatus,
 }
 
+#[derive(Debug, Serialize)]
+pub struct PackageWithStatus {
+    pub id: i64,
+    pub tracking_number: String,
+    pub courier: String,
+    pub service: String,
+    pub status: String,
+    pub estimated_arrival_date: Option<String>,
+    pub last_known_location: Option<String>,
+    pub created_at: String,
+}
+
 pub struct NewPackage {
     pub tracking_number: String,
     pub courier: String,
@@ -68,6 +81,9 @@ pub trait Database: Send {
 
     /// Get all packages that have not yet been delivered.
     fn get_active_packages(&self) -> Result<Vec<Package>>;
+
+    /// Get all packages with their latest status details.
+    fn get_all_packages_with_status(&self) -> Result<Vec<PackageWithStatus>>;
 
     /// Insert a status check record into package_status history.
     fn insert_package_status(

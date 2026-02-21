@@ -5,12 +5,13 @@ mod email_poller;
 mod extractors;
 mod imap_client;
 mod status_poller;
+mod web;
 
 use config::{load as config_load, validate as config_validate};
-use std::sync::{
+use std::{sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
-};
+}};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
@@ -31,6 +32,9 @@ fn main() {
     }
 
     info!(config = ?config.sanitized_for_log(), "Effective configuration");
+
+    let db_path = config.database.path.clone();
+    let web_config = config.web;
 
     let email_db = match db::SqliteDatabase::open(&config.database.path) {
         Ok(db) => db,
@@ -92,6 +96,20 @@ fn main() {
         .spawn(move || status_poller.run())
         .expect("Failed to spawn status poller thread");
 
+    let web_handle = if web_config.enabled {
+        let web_running = Arc::clone(&running);
+        let web_db_path = db_path.clone();
+        let port = web_config.port;
+        Some(
+            std::thread::Builder::new()
+                .name("web-server".into())
+                .spawn(move || web::start(web_db_path, port, web_running))
+                .expect("Failed to spawn web server thread"),
+        )
+    } else {
+        None
+    };
+
     let mut exit_code = 0;
 
     if let Err(err) = email_handle.join() {
@@ -102,6 +120,13 @@ fn main() {
     if let Err(err) = status_handle.join() {
         error!("Status poller thread panicked: {:?}", err);
         exit_code = 1;
+    }
+
+    if let Some(handle) = web_handle {
+        if let Err(err) = handle.join() {
+            error!("Web server thread panicked: {:?}", err);
+            exit_code = 1;
+        }
     }
 
     if exit_code == 0 {
