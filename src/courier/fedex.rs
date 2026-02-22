@@ -7,8 +7,8 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tracing::{debug, warn};
 
-const TOKEN_URL: &str = "https://apis-sandbox.fedex.com/oauth/token";
-const TRACK_URL: &str = "https://apis-sandbox.fedex.com/track/v1/trackingnumbers";
+const TOKEN_URL: &str = "https://apis.fedex.com/oauth/token";
+const TRACK_URL: &str = "https://apis.fedex.com/track/v1/trackingnumbers";
 
 pub struct FedexClient {
     client_id: String,
