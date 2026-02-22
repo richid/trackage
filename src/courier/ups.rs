@@ -86,7 +86,7 @@ impl UpsClient {
 }
 
 impl CourierClient for UpsClient {
-    fn check_status(&self, package: &Package) -> Result<Option<CourierStatus>> {
+    fn check_status(&self, package: &Package) -> Result<Vec<CourierStatus>> {
         let token = self.get_token()?;
 
         let url = format!("{TRACK_URL}{}", package.tracking_number);
@@ -105,7 +105,7 @@ impl CourierClient for UpsClient {
                     tracking_number = %package.tracking_number,
                     "UPS tracking number not found"
                 );
-                return Ok(None);
+                return Ok(vec![]);
             }
             Err(e) => return Err(e).context("UPS track request failed"),
         };
@@ -150,18 +150,20 @@ impl CourierClient for UpsClient {
                     mapped_status = mapped,
                     "UPS status retrieved"
                 );
-                Ok(Some(CourierStatus {
+                Ok(vec![CourierStatus {
                     status: mapped.to_string(),
                     estimated_arrival_date,
                     last_known_location,
-                }))
+                    description: None,
+                    checked_at: None,
+                }])
             }
             None => {
                 warn!(
                     tracking_number = %package.tracking_number,
                     "No status code in UPS response"
                 );
-                Ok(None)
+                Ok(vec![])
             }
         }
     }

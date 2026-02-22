@@ -92,5 +92,7 @@ pub trait Database: Send {
         status: &PackageStatus,
         estimated_arrival_date: Option<&str>,
         last_known_location: Option<&str>,
+        description: Option<&str>,
+        checked_at: Option<&str>,
     ) -> Result<()>;
 }

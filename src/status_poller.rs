@@ -64,8 +64,8 @@ impl StatusPoller {
     }
 
     fn check_package(&mut self, package: &Package) {
-        let result = match self.courier.check_status(package) {
-            Ok(result) => result,
+        let statuses = match self.courier.check_status(package) {
+            Ok(statuses) => statuses,
             Err(err) => {
                 error!(
                     error = %err,
@@ -76,52 +76,60 @@ impl StatusPoller {
             }
         };
 
-        let Some(courier_status) = result else {
+        if statuses.is_empty() {
             info!(
                 tracking_number = %package.tracking_number,
                 "No status update available"
             );
             return;
-        };
+        }
 
-        let status = match PackageStatus::from_str(&courier_status.status) {
-            Ok(s) => s,
-            Err(err) => {
+        let last_idx = statuses.len() - 1;
+        for (i, courier_status) in statuses.iter().enumerate() {
+            let status = match PackageStatus::from_str(&courier_status.status) {
+                Ok(s) => s,
+                Err(err) => {
+                    error!(
+                        error = %err,
+                        tracking_number = %package.tracking_number,
+                        status = %courier_status.status,
+                        "Invalid status from courier"
+                    );
+                    continue;
+                }
+            };
+
+            // Log status change only for the most recent entry
+            if i == last_idx {
+                if status != package.status {
+                    info!(
+                        tracking_number = %package.tracking_number,
+                        old_status = %package.status,
+                        new_status = %status,
+                        "Package status changed"
+                    );
+                } else {
+                    info!(
+                        tracking_number = %package.tracking_number,
+                        "Updating status information"
+                    );
+                }
+            }
+
+            if let Err(err) = self.db.insert_package_status(
+                package.id,
+                &status,
+                courier_status.estimated_arrival_date.as_deref(),
+                courier_status.last_known_location.as_deref(),
+                courier_status.description.as_deref(),
+                courier_status.checked_at.as_deref(),
+            ) {
                 error!(
                     error = %err,
                     tracking_number = %package.tracking_number,
-                    status = %courier_status.status,
-                    "Invalid status from courier"
+                    "Failed to insert package status history"
                 );
-                return;
             }
-        };
-
-        if status != package.status {
-            info!(
-                tracking_number = %package.tracking_number,
-                old_status = %package.status,
-                new_status = %status,
-                "Package status changed"
-            );
-        } else {
-            info!(
-                tracking_number = %package.tracking_number,
-                "Updating status information"
-            );
-        }
-
-        if let Err(err) = self.db.insert_package_status(
-            package.id,
-            &status,
-            courier_status.estimated_arrival_date.as_deref(),
-            courier_status.last_known_location.as_deref(),
-        ) {
-            error!(
-                error = %err,
-                tracking_number = %package.tracking_number,
-                "Failed to insert package status history"
-            );
         }
     }
 

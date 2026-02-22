@@ -85,7 +85,7 @@ impl FedexClient {
 }
 
 impl CourierClient for FedexClient {
-    fn check_status(&self, package: &Package) -> Result<Option<CourierStatus>> {
+    fn check_status(&self, package: &Package) -> Result<Vec<CourierStatus>> {
         let token = self.get_token()?;
 
         let request_body = json!({
@@ -120,7 +120,7 @@ impl CourierClient for FedexClient {
                 error_code = code,
                 "FedEx tracking error"
             );
-            return Ok(None);
+            return Ok(vec![]);
         }
 
         let status_code = track_result["latestStatusDetail"]["code"]
@@ -156,18 +156,20 @@ impl CourierClient for FedexClient {
                     mapped_status = mapped,
                     "FedEx status retrieved"
                 );
-                Ok(Some(CourierStatus {
+                Ok(vec![CourierStatus {
                     status: mapped.to_string(),
                     estimated_arrival_date,
                     last_known_location,
-                }))
+                    description: None,
+                    checked_at: None,
+                }])
             }
             None => {
                 debug!(
                     tracking_number = %package.tracking_number,
                     "No status code in FedEx response"
                 );
-                Ok(None)
+                Ok(vec![])
             }
         }
     }

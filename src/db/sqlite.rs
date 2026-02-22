@@ -28,6 +28,7 @@ impl SqliteDatabase {
             include_str!("../../migrations/0001_create_packages_and_metadata.sql"),
             include_str!("../../migrations/0002_create_package_status.sql"),
             include_str!("../../migrations/0003_add_eta_and_location.sql"),
+            include_str!("../../migrations/0004_add_status_description.sql"),
         ];
 
         let version: u32 = self
@@ -205,16 +206,21 @@ impl Database for SqliteDatabase {
         status: &PackageStatus,
         estimated_arrival_date: Option<&str>,
         last_known_location: Option<&str>,
+        description: Option<&str>,
+        checked_at: Option<&str>,
     ) -> Result<()> {
         self.conn
             .execute(
-                "INSERT INTO package_status (package_id, status, estimated_arrival_date, last_known_location)
-                 VALUES (?1, ?2, ?3, ?4)",
+                "INSERT OR IGNORE INTO package_status
+                    (package_id, status, estimated_arrival_date, last_known_location, description, checked_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, COALESCE(?6, datetime('now')))",
                 rusqlite::params![
                     package_id,
                     status.to_string(),
                     estimated_arrival_date,
                     last_known_location,
+                    description,
+                    checked_at,
                 ],
             )
             .context("Failed to insert package status")?;

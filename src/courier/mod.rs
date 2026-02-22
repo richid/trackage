@@ -13,10 +13,12 @@ pub struct CourierStatus {
     pub status: String,
     pub estimated_arrival_date: Option<String>,
     pub last_known_location: Option<String>,
+    pub description: Option<String>,
+    pub checked_at: Option<String>,
 }
 
 pub trait CourierClient: Send {
-    fn check_status(&self, package: &Package) -> Result<Option<CourierStatus>>;
+    fn check_status(&self, package: &Package) -> Result<Vec<CourierStatus>>;
 }
 
 pub struct CourierRouter {
@@ -36,7 +38,7 @@ impl CourierRouter {
 }
 
 impl CourierClient for CourierRouter {
-    fn check_status(&self, package: &Package) -> Result<Option<CourierStatus>> {
+    fn check_status(&self, package: &Package) -> Result<Vec<CourierStatus>> {
         match self.clients.get(&package.courier) {
             Some(client) => client.check_status(package),
             None => {
@@ -45,7 +47,7 @@ impl CourierClient for CourierRouter {
                     tracking_number = %package.tracking_number,
                     "No client registered for this courier"
                 );
-                Ok(None)
+                Ok(vec![])
             }
         }
     }
