@@ -1,6 +1,6 @@
 use super::{CourierClient, CourierStatus};
 use crate::config::FedexConfig;
-use crate::db::Package;
+use crate::db::{Package, PackageStatus};
 use anyhow::{Context, Result};
 use serde_json::json;
 use std::sync::Mutex;
@@ -75,11 +75,11 @@ impl FedexClient {
         Ok((access_token, ttl))
     }
 
-    fn map_status_code(code: &str) -> &'static str {
+    fn map_status_code(code: &str) -> PackageStatus {
         match code {
-            "DL" => "delivered",
-            "OC" => "waiting",
-            _ => "in_transit",
+            "DL" => PackageStatus::Delivered,
+            "OC" => PackageStatus::Waiting,
+            _ => PackageStatus::InTransit,
         }
     }
 }
@@ -153,7 +153,7 @@ impl CourierClient for FedexClient {
                 debug!(
                     tracking_number = %package.tracking_number,
                     fedex_code = code,
-                    mapped_status = mapped,
+                    mapped_status = %mapped,
                     "FedEx status retrieved"
                 );
                 Ok(vec![CourierStatus {

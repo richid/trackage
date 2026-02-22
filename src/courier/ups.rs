@@ -1,6 +1,6 @@
 use super::{CourierClient, CourierStatus};
 use crate::config::UpsConfig;
-use crate::db::Package;
+use crate::db::{Package, PackageStatus};
 use anyhow::{Context, Result};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use std::sync::Mutex;
@@ -76,11 +76,11 @@ impl UpsClient {
         Ok((access_token, ttl))
     }
 
-    fn map_status_code(code: &str) -> &'static str {
+    fn map_status_code(code: &str) -> PackageStatus {
         match code {
-            "D" => "delivered",
-            "M" | "P" => "waiting",
-            _ => "in_transit",
+            "D" => PackageStatus::Delivered,
+            "M" | "P" => PackageStatus::Waiting,
+            _ => PackageStatus::InTransit,
         }
     }
 }
@@ -147,7 +147,7 @@ impl CourierClient for UpsClient {
                 debug!(
                     tracking_number = %package.tracking_number,
                     ups_code = code,
-                    mapped_status = mapped,
+                    mapped_status = %mapped,
                     "UPS status retrieved"
                 );
                 Ok(vec![CourierStatus {
