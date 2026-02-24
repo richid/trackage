@@ -1,6 +1,9 @@
 ARG PACKAGE=trackage
 
-FROM cgr.dev/chainguard/rust as builder
+FROM cgr.dev/chainguard/rust:latest-dev as builder
+USER root
+RUN apk add --no-cache openssl-dev pkgconf
+USER nonroot
 WORKDIR /app
 COPY --chown=nonroot:nonroot . .
 RUN cargo build --release
