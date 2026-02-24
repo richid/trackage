@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.1](https://github.com/richid/trackage/compare/0.1.0...0.1.1) (2026-02-24)
+
+### Bug Fixes
+
+* Use grep to get version string for Docker release ([e324971](https://github.com/richid/trackage/commit/e32497163dfe58b0a3d5f6fbe0eb171af2146cd2))
+
 ## 0.1.0 (2026-02-24)
 
 ### Features
