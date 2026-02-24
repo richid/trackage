@@ -13,6 +13,7 @@ pub enum PackageStatus {
     Waiting,
     InTransit,
     Delivered,
+    NotFound,
 }
 
 impl fmt::Display for PackageStatus {
@@ -21,6 +22,7 @@ impl fmt::Display for PackageStatus {
             PackageStatus::Waiting => write!(f, "waiting"),
             PackageStatus::InTransit => write!(f, "in_transit"),
             PackageStatus::Delivered => write!(f, "delivered"),
+            PackageStatus::NotFound => write!(f, "not_found"),
         }
     }
 }
@@ -33,6 +35,7 @@ impl FromStr for PackageStatus {
             "waiting" => Ok(PackageStatus::Waiting),
             "in_transit" => Ok(PackageStatus::InTransit),
             "delivered" => Ok(PackageStatus::Delivered),
+            "not_found" => Ok(PackageStatus::NotFound),
             other => Err(anyhow::anyhow!("Unknown package status: {other}")),
         }
     }
@@ -53,15 +56,25 @@ pub struct PackageWithStatus {
     pub courier: String,
     pub service: String,
     pub status: String,
-    pub estimated_arrival_date: Option<String>,
     pub last_known_location: Option<String>,
+    pub tracking_url: Option<String>,
+    pub source_email_from: Option<String>,
     pub created_at: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct StatusHistoryEntry {
+    pub status: String,
+    pub description: Option<String>,
+    pub last_known_location: Option<String>,
+    pub checked_at: String,
 }
 
 pub struct NewPackage {
     pub tracking_number: String,
     pub courier: String,
     pub service: String,
+    pub tracking_url: String,
     pub source_email_uid: u32,
     pub source_email_subject: Option<String>,
     pub source_email_from: Option<String>,
@@ -85,6 +98,9 @@ pub trait Database: Send {
     /// Get all packages with their latest status details.
     fn get_all_packages_with_status(&self) -> Result<Vec<PackageWithStatus>>;
 
+    /// Get the full status history for a package, newest first.
+    fn get_package_status_history(&self, package_id: i64) -> Result<Vec<StatusHistoryEntry>>;
+
     /// Insert a status check record into package_status history.
     fn insert_package_status(
         &mut self,
@@ -95,4 +111,7 @@ pub trait Database: Send {
         description: Option<&str>,
         checked_at: Option<&str>,
     ) -> Result<()>;
+
+    /// Soft-delete a package by setting deleted_at. Returns true if a row was updated.
+    fn delete_package(&mut self, package_id: i64) -> Result<bool>;
 }

@@ -7,9 +7,9 @@ pub fn extract_candidates(text: &str) -> Vec<String> {
     let uppercased = text.to_uppercase();
     let mut results = Vec::new();
 
-    // Pattern 1: contiguous alphanumeric with optional dashes (most carriers)
+    // Pattern 1: contiguous alphanumeric (most carriers)
     let re_contiguous =
-        Regex::new(r"\b[A-Z0-9][A-Z0-9\-]{12,32}[A-Z0-9]\b").expect("invalid tracking regex");
+        Regex::new(r"\b[A-Z0-9]{12,34}\b").expect("invalid tracking regex");
 
     // Pattern 2: space-separated digit groups, e.g. USPS "9400 1000 0000 0000 0000 00"
     let re_spaced =
@@ -71,6 +71,14 @@ mod tests {
         let result = extract_candidates(text);
 
         assert_eq!(result, vec!["1Z999AA10123456784", "JD014600003828392837"]);
+    }
+
+    #[test]
+    fn extracts_12_digit_fedex_number() {
+        let text = "Your order has shipped. Here is your tracking info FEDEX 986578788855.";
+        let result = extract_candidates(text);
+
+        assert_eq!(result, vec!["986578788855"]);
     }
 
     #[test]

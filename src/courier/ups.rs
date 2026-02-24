@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 const TOKEN_URL: &str = "https://onlinetools.ups.com/security/v1/oauth/token";
 const TRACK_URL: &str = "https://onlinetools.ups.com/api/track/v1/details/";
@@ -117,7 +117,10 @@ impl CourierClient for UpsClient {
 
         let pkg = &body["trackResponse"]["shipment"][0]["package"][0];
 
-        let status_code = pkg["currentStatus"]["code"].as_str();
+        // Try currentStatus.type first, fall back to most recent activity
+        let status_code = pkg["currentStatus"]["type"]
+            .as_str()
+            .or_else(|| pkg["activity"][0]["status"]["type"].as_str());
 
         match status_code {
             Some(code) => {
@@ -144,7 +147,7 @@ impl CourierClient for UpsClient {
                         })
                     });
 
-                debug!(
+                info!(
                     tracking_number = %package.tracking_number,
                     ups_code = code,
                     mapped_status = %mapped,
@@ -161,6 +164,7 @@ impl CourierClient for UpsClient {
             None => {
                 warn!(
                     tracking_number = %package.tracking_number,
+                    response = %body,
                     "No status code in UPS response"
                 );
                 Ok(vec![])

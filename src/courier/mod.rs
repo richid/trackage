@@ -60,6 +60,17 @@ pub enum CourierCode {
     USPS,
 }
 
+impl CourierCode {
+    /// Human-readable display name for UI use.
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            CourierCode::FedEx => "FedEx",
+            CourierCode::UPS   => "UPS",
+            CourierCode::USPS  => "USPS",
+        }
+    }
+}
+
 impl fmt::Display for CourierCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -126,6 +126,7 @@ impl EmailPoller {
                 tracking_number: result.tracking_number.clone(),
                 courier,
                 service: result.service.clone(),
+                tracking_url: result.tracking_url.clone(),
                 source_email_uid: msg.uid,
                 source_email_subject: parsed.subject.clone(),
                 source_email_from: parsed.from.clone(),

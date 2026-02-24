@@ -164,9 +164,18 @@ impl UspsClient {
     }
 
     fn extract_location(text: &str) -> Option<String> {
-        // Match "CITY, ST" pattern — city is one or more title-case words, state is 2 uppercase letters
+        // Pattern 1: "City, ST" with comma separator
         let re = Regex::new(r"([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*),\s+([A-Z]{2})\b").unwrap();
-        re.captures(text).map(|caps| format!("{}, {}", &caps[1], &caps[2]))
+        if let Some(caps) = re.captures(text) {
+            return Some(format!("{}, {}", &caps[1], &caps[2]));
+        }
+
+        // Pattern 2: "CITY ST" without comma (e.g., USPS facility names like
+        // "OKLAHOMA CITY OK DISTRIBUTION CENTER"). Look in the last comma-separated
+        // segment to avoid false positives from the description portion.
+        let last_segment = text.rsplit(',').next()?.trim();
+        let re2 = Regex::new(r"([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*)\s+([A-Z]{2})\b").unwrap();
+        re2.captures(last_segment).map(|caps| format!("{}, {}", &caps[1], &caps[2]))
     }
 
     fn parse_event_summary(summary: &str) -> CourierStatus {

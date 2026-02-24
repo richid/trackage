@@ -4,20 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Trackage</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 4L4 18v28l28 14 28-14V18z' fill='%23d0e8ff' stroke='%231a5fa0' stroke-width='2.5' stroke-linejoin='round'/%3E%3Cpath d='M4 18l28 14 28-14M32 32v28' fill='none' stroke='%231a5fa0' stroke-width='2.5'/%3E%3Cpath d='M18 11l28 14' fill='none' stroke='%231a5fa0' stroke-width='2' stroke-dasharray='4 3'/%3E%3C/svg%3E">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f5f5f5; color: #333; }
 .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
 h1 { font-size: 1.5rem; font-weight: 600; }
-.toolbar { display: flex; align-items: center; gap: 12px; margin: 20px 0 12px; flex-wrap: wrap; }
-.toolbar select, .toolbar button {
+.toolbar { display: flex; align-items: center; gap: 12px; margin: 20px 0 12px; flex-wrap: wrap; justify-content: space-between; }
+.toolbar-left { display: flex; align-items: center; gap: 12px; }
+.toolbar-right { display: flex; align-items: center; gap: 8px; position: relative; }
+.toolbar select {
   padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px;
   background: #fff; font-size: 0.875rem; cursor: pointer;
 }
-.toolbar button:hover { background: #eee; }
-.table-wrap { overflow-x: auto; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.spinner { width: 16px; height: 16px; border: 2px solid #ddd; border-top-color: #1a5fa0; border-radius: 50%; animation: spin 0.6s linear infinite; display: none; }
+.spinner.active { display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.table-wrap { border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 table { width: 100%; border-collapse: collapse; background: #fff; font-size: 0.875rem; }
-th, td { text-align: left; padding: 10px 14px; white-space: nowrap; }
+th, td { text-align: left; padding: 10px 14px; }
 th {
   background: #fafafa; border-bottom: 2px solid #e0e0e0;
   cursor: pointer; user-select: none; position: relative;
@@ -26,28 +31,87 @@ th:hover { background: #f0f0f0; }
 th .arrow { margin-left: 4px; font-size: 0.7rem; color: #999; }
 th.active .arrow { color: #333; }
 tr:not(:last-child) td { border-bottom: 1px solid #eee; }
-tr:hover td { background: #f9f9f9; }
+tr.pkg-row:nth-child(odd) td { background: #fff; }
+tr.pkg-row:nth-child(even) td { background: #f7f9fc; }
+tr.pkg-row:hover td { background: #edf2f9; }
 .badge {
   display: inline-block; padding: 2px 8px; border-radius: 10px;
   font-size: 0.75rem; font-weight: 600; text-transform: capitalize;
+  white-space: nowrap;
 }
 .badge-waiting { background: #e0e0e0; color: #555; }
 .badge-in_transit { background: #d0e8ff; color: #1a5fa0; }
 .badge-delivered { background: #d4edda; color: #1e7e34; }
+.badge-not_found { background: #f8d7da; color: #721c24; }
+.track-link { color: #1a5fa0; text-decoration: none; font-size: 0.8rem; margin-left: 4px; }
+.track-link:hover { color: #0d3f73; }
 .empty { text-align: center; padding: 48px 16px; color: #888; }
+tr.pkg-row { cursor: pointer; }
+tr.pkg-row.expanded td { border-bottom: none; }
+.expand-icon { display: inline-block; width: 16px; margin-right: 4px; font-size: 0.7rem; color: #999; transition: transform 0.15s; }
+tr.pkg-row.expanded .expand-icon { transform: rotate(90deg); color: #1a5fa0; }
+tr.history-row td { padding: 0; background: #fafafa; }
+.history-wrap { padding: 8px 14px 12px 28px; }
+.history-wrap table { box-shadow: none; font-size: 0.8rem; border-collapse: separate; border-spacing: 0 6px; }
+.history-wrap th { background: #f0f0f0; border-bottom: 1px solid #ddd; cursor: default; padding: 8px 12px !important; }
+.history-wrap td { padding: 12px 12px !important; }
+.history-wrap tbody tr:nth-child(odd) td { background: #fff; }
+.history-wrap tbody tr:nth-child(even) td { background: #f3f5f8; }
+.history-wrap tr:last-child td { border-bottom: none; }
+.history-empty { color: #888; font-size: 0.8rem; padding: 4px 0; }
+#trackInput {
+  padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px;
+  font-size: 0.875rem; width: 240px;
+}
+#trackInput:focus { outline: none; border-color: #1a5fa0; }
+.validate-card {
+  position: absolute; top: 100%; right: 0; margin-top: 6px;
+  background: #fff; border: 1px solid #ddd; border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 280px; z-index: 10;
+  font-size: 0.875rem; display: none;
+}
+.validate-card.open { display: block; }
+.validate-card .vc-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #eee; }
+.validate-card .vc-row:last-child { border-bottom: none; }
+.validate-card .vc-info { display: flex; flex-direction: column; gap: 2px; }
+.validate-card .vc-courier { font-weight: 600; }
+.validate-card .vc-service { font-size: 0.8rem; color: #666; }
+.validate-card .vc-msg { padding: 10px 14px; color: #888; }
+.validate-card .vc-msg.error { color: #c0392b; }
+.vc-btn {
+  padding: 4px 14px; border: none; border-radius: 4px;
+  font-size: 0.8rem; cursor: pointer; font-weight: 600;
+}
+.vc-btn-add { background: #1a5fa0; color: #fff; }
+.vc-btn-add:hover { background: #164d85; }
+.vc-btn-cancel { background: #e0e0e0; color: #555; }
+.vc-btn-cancel:hover { background: #d0d0d0; }
+.validate-card .vc-footer { display: flex; justify-content: flex-end; padding: 8px 14px; border-top: 1px solid #eee; }
+.btn-delete {
+  background: none; border: none; cursor: pointer; color: #999; font-size: 0.85rem;
+  padding: 2px 6px; border-radius: 4px; line-height: 1;
+}
+.btn-delete:hover { background: #f8d7da; color: #721c24; }
 </style>
 </head>
 <body>
 <div class="container">
   <h1>Trackage</h1>
   <div class="toolbar">
-    <select id="statusFilter">
-      <option value="">All Statuses</option>
-      <option value="waiting">Waiting</option>
-      <option value="in_transit">In Transit</option>
-      <option value="delivered">Delivered</option>
-    </select>
-    <button id="refreshBtn">Refresh</button>
+    <div class="toolbar-left">
+      <select id="statusFilter">
+        <option value="">All Statuses</option>
+        <option value="waiting">Waiting</option>
+        <option value="in_transit">In Transit</option>
+        <option value="delivered">Delivered</option>
+        <option value="not_found">Not Found</option>
+      </select>
+      <div class="spinner" id="spinner"></div>
+    </div>
+    <div class="toolbar-right">
+      <input type="text" id="trackInput" placeholder="Enter tracking number...">
+      <div class="validate-card" id="validateCard"></div>
+    </div>
   </div>
   <div class="table-wrap">
     <table>
@@ -56,9 +120,10 @@ tr:hover td { background: #f9f9f9; }
           <th data-col="tracking_number">Tracking Number <span class="arrow"></span></th>
           <th data-col="courier">Courier <span class="arrow"></span></th>
           <th data-col="status">Status <span class="arrow"></span></th>
-          <th data-col="estimated_arrival_date">Est. Arrival <span class="arrow"></span></th>
+          <th data-col="source_email_from">Sender <span class="arrow"></span></th>
           <th data-col="last_known_location">Last Location <span class="arrow"></span></th>
           <th data-col="created_at">Created <span class="arrow"></span></th>
+          <th style="width:50px"></th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -71,13 +136,14 @@ tr:hover td { background: #f9f9f9; }
   let packages = [];
   let sortCol = 'created_at';
   let sortAsc = false;
+  let expandedId = null;
 
   const tbody = document.getElementById('tbody');
   const empty = document.getElementById('empty');
   const filter = document.getElementById('statusFilter');
+  const spinner = document.getElementById('spinner');
 
   filter.addEventListener('change', render);
-  document.getElementById('refreshBtn').addEventListener('click', load);
 
   document.querySelectorAll('th[data-col]').forEach(th => {
     th.addEventListener('click', () => {
@@ -91,12 +157,22 @@ tr:hover td { background: #f9f9f9; }
   function badgeClass(s) {
     if (s === 'delivered') return 'badge-delivered';
     if (s === 'in_transit') return 'badge-in_transit';
+    if (s === 'not_found') return 'badge-not_found';
     return 'badge-waiting';
   }
 
   function statusLabel(s) {
     if (s === 'in_transit') return 'In Transit';
+    if (s === 'not_found') return 'Not Found';
     return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function parseSender(raw) {
+    if (!raw) return { name: '', email: '' };
+    const m = raw.match(/^"?(.+?)"?\s*<(.+?)>$/);
+    if (m) return { name: m[1].trim(), email: m[2].trim() };
+    if (raw.includes('@')) return { name: raw, email: raw };
+    return { name: raw, email: '' };
   }
 
   function esc(str) {
@@ -120,6 +196,8 @@ tr:hover td { background: #f9f9f9; }
       return 0;
     });
 
+    expandedId = null;
+
     // Update sort arrows
     document.querySelectorAll('th[data-col]').forEach(th => {
       const arrow = th.querySelector('.arrow');
@@ -139,24 +217,160 @@ tr:hover td { background: #f9f9f9; }
     }
     empty.style.display = 'none';
 
-    tbody.innerHTML = data.map(p => `<tr>
-      <td>${esc(p.tracking_number)}</td>
+    tbody.innerHTML = data.map(p => `<tr class="pkg-row" data-id="${p.id}">
+      <td><span class="expand-icon">&#x25B6;</span>${esc(p.tracking_number)}${p.tracking_url ? ` <a href="${esc(p.tracking_url)}" target="_blank" rel="noopener" class="track-link" title="Track on courier site">&#x2197;</a>` : ''}</td>
       <td>${esc(p.courier)}</td>
       <td><span class="badge ${badgeClass(p.status)}">${statusLabel(p.status)}</span></td>
-      <td>${esc(p.estimated_arrival_date)}</td>
+      <td>${(() => { const s = parseSender(p.source_email_from); return s.email ? `<span title="${esc(s.email)}">${esc(s.name)}</span>` : esc(s.name); })()}</td>
       <td>${esc(p.last_known_location)}</td>
       <td>${esc(p.created_at)}</td>
+      <td><button class="btn-delete" data-id="${p.id}" title="Delete package">&#x2715;</button></td>
     </tr>`).join('');
+
+    tbody.querySelectorAll('.pkg-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('a') || e.target.closest('.btn-delete')) return;
+        toggleHistory(row);
+      });
+    });
+
+    tbody.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        fetch(`/api/packages/${id}`, { method: 'DELETE' })
+          .then(r => { if (r.ok) load(); })
+          .catch(err => console.error('Failed to delete package:', err));
+      });
+    });
   }
 
+  function collapseExpanded() {
+    const prev = tbody.querySelector('.history-row');
+    if (prev) {
+      prev.previousElementSibling.classList.remove('expanded');
+      prev.remove();
+    }
+    expandedId = null;
+  }
+
+  function toggleHistory(row) {
+    const id = row.dataset.id;
+    if (expandedId === id) {
+      collapseExpanded();
+      return;
+    }
+    collapseExpanded();
+    expandedId = id;
+    row.classList.add('expanded');
+
+    const detail = document.createElement('tr');
+    detail.className = 'history-row';
+    detail.innerHTML = `<td colspan="7"><div class="history-wrap">Loading...</div></td>`;
+    row.after(detail);
+
+    fetch(`/api/packages/${id}/history`)
+      .then(r => r.json())
+      .then(entries => {
+        const wrap = detail.querySelector('.history-wrap');
+        if (entries.length === 0) {
+          wrap.innerHTML = '<div class="history-empty">No status history recorded.</div>';
+          return;
+        }
+        wrap.innerHTML = `<table><thead><tr>
+          <th>Time</th><th>Status</th><th>Location</th><th>Description</th>
+        </tr></thead><tbody>${entries.map(e => `<tr>
+          <td>${esc(e.checked_at)}</td>
+          <td><span class="badge ${badgeClass(e.status)}">${statusLabel(e.status)}</span></td>
+          <td>${esc(e.last_known_location)}</td>
+          <td>${esc(e.description)}</td>
+        </tr>`).join('')}</tbody></table>`;
+      })
+      .catch(() => {
+        detail.querySelector('.history-wrap').textContent = 'Failed to load history.';
+      });
+  }
+
+  // --- Manual package entry ---
+  const trackInput = document.getElementById('trackInput');
+  const validateCard = document.getElementById('validateCard');
+
+  trackInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = trackInput.value.trim();
+      if (!val) return;
+      validateCard.innerHTML = '<div class="vc-msg">Checking...</div>';
+      validateCard.classList.add('open');
+      fetch('/api/packages/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tracking_number: val })
+      })
+      .then(r => r.json())
+      .then(matches => {
+        if (matches.length === 0) {
+          validateCard.innerHTML = '<div class="vc-msg">Not recognized as a valid tracking number.</div>'
+            + '<div class="vc-footer"><button class="vc-btn vc-btn-cancel" onclick="document.getElementById(\'validateCard\').classList.remove(\'open\')">Close</button></div>';
+          return;
+        }
+        validateCard.innerHTML = matches.map((m, i) =>
+          `<div class="vc-row">
+            <div class="vc-info"><span class="vc-courier">${esc(m.courier)}</span><span class="vc-service">${esc(m.service)}</span></div>
+            <button class="vc-btn vc-btn-add" data-idx="${i}">Add</button>
+          </div>`
+        ).join('')
+        + '<div class="vc-footer"><button class="vc-btn vc-btn-cancel" onclick="document.getElementById(\'validateCard\').classList.remove(\'open\')">Cancel</button></div>';
+
+        validateCard.querySelectorAll('.vc-btn-add').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const m = matches[parseInt(btn.dataset.idx)];
+            btn.disabled = true;
+            btn.textContent = '...';
+            fetch('/api/packages', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(m)
+            }).then(r => {
+              if (r.status === 201) {
+                validateCard.classList.remove('open');
+                trackInput.value = '';
+                load();
+              } else if (r.status === 409) {
+                validateCard.innerHTML = '<div class="vc-msg">Already tracked.</div>'
+                  + '<div class="vc-footer"><button class="vc-btn vc-btn-cancel" onclick="document.getElementById(\'validateCard\').classList.remove(\'open\')">Close</button></div>';
+              } else {
+                validateCard.innerHTML = '<div class="vc-msg error">Failed to add package.</div>'
+                  + '<div class="vc-footer"><button class="vc-btn vc-btn-cancel" onclick="document.getElementById(\'validateCard\').classList.remove(\'open\')">Close</button></div>';
+              }
+            });
+          });
+        });
+      })
+      .catch(() => {
+        validateCard.innerHTML = '<div class="vc-msg error">Request failed.</div>'
+          + '<div class="vc-footer"><button class="vc-btn vc-btn-cancel" onclick="document.getElementById(\'validateCard\').classList.remove(\'open\')">Close</button></div>';
+      });
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.toolbar-right')) {
+      validateCard.classList.remove('open');
+    }
+  });
+
   function load() {
+    spinner.classList.add('active');
     fetch('/api/packages')
       .then(r => r.json())
       .then(data => { packages = data; render(); })
-      .catch(err => console.error('Failed to load packages:', err));
+      .catch(err => console.error('Failed to load packages:', err))
+      .finally(() => spinner.classList.remove('active'));
   }
 
   load();
+  setInterval(load, 30000);
 })();
 </script>
 </body>

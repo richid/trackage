@@ -1,4 +1,4 @@
-use super::{Database, NewPackage, Package, PackageStatus, PackageWithStatus};
+use super::{Database, NewPackage, Package, PackageStatus, PackageWithStatus, StatusHistoryEntry};
 use crate::courier::CourierCode;
 use anyhow::{Context, Result};
 use rusqlite::Connection;
@@ -29,6 +29,8 @@ impl SqliteDatabase {
             include_str!("../../migrations/0002_create_package_status.sql"),
             include_str!("../../migrations/0003_add_eta_and_location.sql"),
             include_str!("../../migrations/0004_add_status_description.sql"),
+            include_str!("../../migrations/0005_add_tracking_url.sql"),
+            include_str!("../../migrations/0006_add_deleted_at.sql"),
         ];
 
         let version: u32 = self
@@ -90,13 +92,14 @@ impl Database for SqliteDatabase {
             .conn
             .execute(
                 "INSERT OR IGNORE INTO packages
-                    (tracking_number, courier, service, source_email_uid,
+                    (tracking_number, courier, service, tracking_url, source_email_uid,
                      source_email_subject, source_email_from, source_email_date)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 rusqlite::params![
                     package.tracking_number,
                     package.courier,
                     package.service,
+                    package.tracking_url,
                     package.source_email_uid,
                     package.source_email_subject,
                     package.source_email_from,
@@ -121,8 +124,9 @@ impl Database for SqliteDatabase {
                                'waiting'
                            ) AS status
                     FROM packages p
+                    WHERE p.deleted_at IS NULL
                 )
-                SELECT * FROM current_status WHERE status != 'delivered'",
+                SELECT * FROM current_status WHERE status NOT IN ('delivered', 'not_found')",
             )
             .context("Failed to prepare get_active_packages query")?;
 
@@ -167,8 +171,9 @@ impl Database for SqliteDatabase {
             .prepare(
                 "SELECT p.id, p.tracking_number, p.courier, p.service,
                         COALESCE(ps.status, 'waiting') AS status,
-                        ps.estimated_arrival_date,
                         ps.last_known_location,
+                        p.tracking_url,
+                        p.source_email_from,
                         p.created_at
                  FROM packages p
                  LEFT JOIN package_status ps ON ps.id = (
@@ -176,21 +181,28 @@ impl Database for SqliteDatabase {
                      WHERE ps2.package_id = p.id
                      ORDER BY ps2.id DESC LIMIT 1
                  )
+                 WHERE p.deleted_at IS NULL
                  ORDER BY p.created_at DESC",
             )
             .context("Failed to prepare get_all_packages_with_status query")?;
 
         let packages = stmt
             .query_map([], |row| {
+                let courier_raw: String = row.get(2)?;
+                let courier = courier_raw
+                    .parse::<CourierCode>()
+                    .map(|c| c.display_name().to_string())
+                    .unwrap_or(courier_raw);
                 Ok(PackageWithStatus {
                     id: row.get(0)?,
                     tracking_number: row.get(1)?,
-                    courier: row.get(2)?,
+                    courier,
                     service: row.get(3)?,
                     status: row.get(4)?,
-                    estimated_arrival_date: row.get(5)?,
-                    last_known_location: row.get(6)?,
-                    created_at: row.get(7)?,
+                    last_known_location: row.get(5)?,
+                    tracking_url: row.get(6)?,
+                    source_email_from: row.get(7)?,
+                    created_at: row.get(8)?,
                 })
             })
             .context("Failed to query packages with status")?
@@ -198,6 +210,33 @@ impl Database for SqliteDatabase {
             .context("Failed to read packages with status rows")?;
 
         Ok(packages)
+    }
+
+    fn get_package_status_history(&self, package_id: i64) -> Result<Vec<StatusHistoryEntry>> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT status, description, last_known_location, checked_at
+                 FROM package_status
+                 WHERE package_id = ?1
+                 ORDER BY id DESC",
+            )
+            .context("Failed to prepare get_package_status_history query")?;
+
+        let entries = stmt
+            .query_map([package_id], |row| {
+                Ok(StatusHistoryEntry {
+                    status: row.get(0)?,
+                    description: row.get(1)?,
+                    last_known_location: row.get(2)?,
+                    checked_at: row.get(3)?,
+                })
+            })
+            .context("Failed to query package status history")?
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .context("Failed to read package status history rows")?;
+
+        Ok(entries)
     }
 
     fn insert_package_status(
@@ -228,6 +267,18 @@ impl Database for SqliteDatabase {
         Ok(())
     }
 
+    fn delete_package(&mut self, package_id: i64) -> Result<bool> {
+        let changes = self
+            .conn
+            .execute(
+                "UPDATE packages SET deleted_at = datetime('now')
+                 WHERE id = ?1 AND deleted_at IS NULL",
+                [package_id],
+            )
+            .context("Failed to soft-delete package")?;
+
+        Ok(changes > 0)
+    }
 }
 
 use rusqlite::OptionalExtension;

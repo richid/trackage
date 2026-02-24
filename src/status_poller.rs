@@ -79,8 +79,22 @@ impl StatusPoller {
         if statuses.is_empty() {
             info!(
                 tracking_number = %package.tracking_number,
-                "No status update available"
+                "No status update available, marking as not_found"
             );
+            if let Err(err) = self.db.insert_package_status(
+                package.id,
+                &PackageStatus::NotFound,
+                None,
+                None,
+                None,
+                None,
+            ) {
+                error!(
+                    error = %err,
+                    tracking_number = %package.tracking_number,
+                    "Failed to insert not_found status"
+                );
+            }
             return;
         }
 
