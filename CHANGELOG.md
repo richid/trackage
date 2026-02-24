@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/richid/trackage/compare/0.1.1...0.1.2) (2026-02-24)
+
+### Bug Fixes
+
+* Ensure Cargo.lock is committed ([b185bda](https://github.com/richid/trackage/commit/b185bdafff26ca079a4ee32b16bf7689d4fef3bf))
+* Permission error when building Docker image, chainguard runs as nonroot ([ae71d70](https://github.com/richid/trackage/commit/ae71d70c7a7032b1af4ce0e2e7665bb96c5a7992))
+
 ## [0.1.1](https://github.com/richid/trackage/compare/0.1.0...0.1.1) (2026-02-24)
 
 ### Bug Fixes
