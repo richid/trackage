@@ -36,11 +36,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Install release-it and plugins
+        run: >-
+          npm install --no-save
+          release-it@19.2.4
+          @release-it/conventional-changelog@10.0.5
+          @release-it/bumper@7.0.5
+
       - name: Run release-it
         id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -eo pipefail
+
           FLAGS="--ci"
           if [ "${{ inputs.dry-run }}" = "true" ]; then
             FLAGS="$FLAGS --dry-run"
@@ -48,7 +57,7 @@ jobs:
           if [ -n "${{ inputs.release-version }}" ]; then
             FLAGS="$FLAGS ${{ inputs.release-version }}"
           fi
-          npx --yes -- release-it \
+          npx release-it \
             --config .release-it.json \
             -VV \
             $FLAGS | tee release-output.txt
