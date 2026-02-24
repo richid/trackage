@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.3](https://github.com/richid/trackage/compare/0.1.2...0.1.3) (2026-02-24)
+
+### Bug Fixes
+
+* Another fix for Docker release: install openssl when building ([9a50655](https://github.com/richid/trackage/commit/9a50655d6531e050d3fe47083e31d076f3b7c610))
+
 ## [0.1.2](https://github.com/richid/trackage/compare/0.1.1...0.1.2) (2026-02-24)
 
 ### Bug Fixes
