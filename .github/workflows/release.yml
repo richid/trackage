@@ -60,12 +60,9 @@ jobs:
           npx release-it \
             --config .release-it.json \
             -VV \
-            $FLAGS | tee release-output.txt
+            $FLAGS
 
-          VERSION=$(grep -oP 'tag \K[0-9]+\.[0-9]+\.[0-9]+' release-output.txt || true)
-          if [ -z "$VERSION" ] && [ -n "${{ inputs.release-version }}" ]; then
-            VERSION="${{ inputs.release-version }}"
-          fi
+          VERSION=$(grep -oP '^version = "\K[0-9]+\.[0-9]+\.[0-9]+' Cargo.toml)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Released version: $VERSION"
 
