@@ -2,7 +2,7 @@ ARG PACKAGE=trackage
 
 FROM cgr.dev/chainguard/rust as builder
 WORKDIR /app
-COPY . .
+COPY --chown=nonroot:nonroot . .
 RUN cargo build --release
 
 FROM cgr.dev/chainguard/glibc-dynamic
