@@ -25,5 +25,8 @@ config.toml
 *.db
 *.db-*
 
+# Node (release-it)
+node_modules/
+
 # AI Overlords
 .claude/

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/release-it/release-it/refs/heads/main/schema/release-it.json",
+  "plugins": {
+    "@release-it/conventional-changelog": {
+      "preset": {
+        "name": "conventionalcommits"
+      },
+      "infile": "CHANGELOG.md",
+      "header": "# Changelog"
+    },
+    "@release-it/bumper": {
+      "in": "Cargo.toml",
+      "out": "Cargo.toml"
+    }
+  },
+  "git": {
+    "commitMessage": "chore: release ${version}",
+    "tagName": "${version}"
+  },
+  "github": {
+    "release": true,
+    "releaseName": "${version}"
+  },
+  "npm": {
+    "publish": false,
+    "skipChecks": true
+  }
+}
