@@ -13,6 +13,9 @@
       "out": "Cargo.toml"
     }
   },
+  "hooks": {
+    "after:bump": "cargo generate-lockfile && git add Cargo.lock"
+  },
   "git": {
     "commitMessage": "chore: release ${version}",
     "tagName": "${version}"
