@@ -267,6 +267,17 @@ impl Database for SqliteDatabase {
         Ok(())
     }
 
+    fn delete_all_package_status(&mut self, package_id: i64) -> Result<()> {
+        self.conn
+            .execute(
+                "DELETE FROM package_status WHERE package_id = ?1",
+                [package_id],
+            )
+            .context("Failed to delete all package status")?;
+
+        Ok(())
+    }
+
     fn delete_package(&mut self, package_id: i64) -> Result<bool> {
         let changes = self
             .conn

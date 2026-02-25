@@ -92,6 +92,11 @@ tr.history-row td { padding: 0; background: #fafafa; }
   padding: 2px 6px; border-radius: 4px; line-height: 1;
 }
 .btn-delete:hover { background: #f8d7da; color: #721c24; }
+.btn-rescan {
+  background: none; border: none; cursor: pointer; color: #999; font-size: 0.85rem;
+  padding: 2px 6px; border-radius: 4px; line-height: 1;
+}
+.btn-rescan:hover { background: #ffff8b; color:#333; }
 </style>
 </head>
 <body>
@@ -219,8 +224,8 @@ tr.history-row td { padding: 0; background: #fafafa; }
 
     tbody.innerHTML = data.map(p => `<tr class="pkg-row" data-id="${p.id}">
       <td><span class="expand-icon">&#x25B6;</span>${esc(p.tracking_number)}${p.tracking_url ? ` <a href="${esc(p.tracking_url)}" target="_blank" rel="noopener" class="track-link" title="Track on courier site">&#x2197;</a>` : ''}</td>
-      <td>${esc(p.courier)}</td>
-      <td><span class="badge ${badgeClass(p.status)}">${statusLabel(p.status)}</span></td>
+      <td>${p.service ? `<span title="${esc(p.service)}">${esc(p.courier)}</span>` : esc(p.courier)}</td>
+      <td><span class="badge ${badgeClass(p.status)}">${statusLabel(p.status)}</span>${p.status == "not_found" ? `<button class="btn-rescan" data-id="${p.id}" title="Rescan package">&#x21ba;</button>` : ''}</td>
       <td>${(() => { const s = parseSender(p.source_email_from); return s.email ? `<span title="${esc(s.email)}">${esc(s.name)}</span>` : esc(s.name); })()}</td>
       <td>${esc(p.last_known_location)}</td>
       <td>${esc(p.created_at)}</td>
@@ -229,7 +234,7 @@ tr.history-row td { padding: 0; background: #fafafa; }
 
     tbody.querySelectorAll('.pkg-row').forEach(row => {
       row.addEventListener('click', (e) => {
-        if (e.target.closest('a') || e.target.closest('.btn-delete')) return;
+        if (e.target.closest('a') || e.target.closest('.btn-delete') || e.target.closest('.btn-rescan')) return;
         toggleHistory(row);
       });
     });
@@ -241,6 +246,16 @@ tr.history-row td { padding: 0; background: #fafafa; }
         fetch(`/api/packages/${id}`, { method: 'DELETE' })
           .then(r => { if (r.ok) load(); })
           .catch(err => console.error('Failed to delete package:', err));
+      });
+    });
+
+    tbody.querySelectorAll('.btn-rescan').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        fetch(`/api/packages/${id}/rescan`, { method: 'POST' })
+          .then(r => { if (r.ok) load(); })
+          .catch(err => console.error('Failed to rescan package:', err));
       });
     });
   }

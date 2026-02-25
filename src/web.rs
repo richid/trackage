@@ -123,6 +123,17 @@ async fn api_package_history(State(db): State<Db>, Path(id): Path<i64>) -> Respo
     }
 }
 
+async fn api_package_rescan(State(db): State<Db>, Path(id): Path<i64>) -> Response {
+    let mut db = db.lock().unwrap();
+    match db.delete_all_package_status(id) {
+        Ok(_) => StatusCode::ACCEPTED.into_response(),
+        Err(err) => {
+            error!(error = %err, package_id = id, "Failed to delete all package history");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
 pub fn start(db_path: String, port: u16, running: Arc<AtomicBool>) {
     let db = match SqliteDatabase::open(&db_path) {
         Ok(db) => Arc::new(Mutex::new(db)),
@@ -138,6 +149,7 @@ pub fn start(db_path: String, port: u16, running: Arc<AtomicBool>) {
         .route("/api/packages/validate", post(api_validate))
         .route("/api/packages/{id}", delete(api_delete_package))
         .route("/api/packages/{id}/history", get(api_package_history))
+        .route("/api/packages/{id}/rescan", post(api_package_rescan))
         .with_state(db);
 
     let rt = tokio::runtime::Builder::new_current_thread()

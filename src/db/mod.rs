@@ -113,6 +113,9 @@ pub trait Database: Send {
         checked_at: Option<&str>,
     ) -> Result<()>;
 
+    /// Delete all status history for a package, resetting it to "waiting".
+    fn delete_all_package_status(&mut self, package_id: i64) -> Result<()>;
+
     /// Soft-delete a package by setting deleted_at. Returns true if a row was updated.
     fn delete_package(&mut self, package_id: i64) -> Result<bool>;
 }
