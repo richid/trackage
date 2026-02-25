@@ -20,5 +20,6 @@ tracking-numbers = "0.1.2"
 rusqlite = { version = "0.32", features = ["bundled"] }
 base64 = "0.22"
 ureq = { version = "3", features = ["json"] }
+reqwest = { version = "0.12", features = ["blocking", "cookies", "json", "gzip", "brotli", "deflate"] }
 axum = "0.8"
 tokio = { version = "1", features = ["rt", "net", "time"] }

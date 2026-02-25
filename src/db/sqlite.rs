@@ -31,6 +31,7 @@ impl SqliteDatabase {
             include_str!("../../migrations/0004_add_status_description.sql"),
             include_str!("../../migrations/0005_add_tracking_url.sql"),
             include_str!("../../migrations/0006_add_deleted_at.sql"),
+            include_str!("../../migrations/0007_normalize_dates_rfc3339.sql"),
         ];
 
         let version: u32 = self
@@ -93,8 +94,8 @@ impl Database for SqliteDatabase {
             .execute(
                 "INSERT OR IGNORE INTO packages
                     (tracking_number, courier, service, tracking_url, source_email_uid,
-                     source_email_subject, source_email_from, source_email_date)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                     source_email_subject, source_email_from, source_email_date, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))",
                 rusqlite::params![
                     package.tracking_number,
                     package.courier,
@@ -252,7 +253,7 @@ impl Database for SqliteDatabase {
             .execute(
                 "INSERT OR IGNORE INTO package_status
                     (package_id, status, estimated_arrival_date, last_known_location, description, checked_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, COALESCE(?6, datetime('now')))",
+                 VALUES (?1, ?2, ?3, ?4, ?5, COALESCE(?6, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')))",
                 rusqlite::params![
                     package_id,
                     status.to_string(),
@@ -282,7 +283,7 @@ impl Database for SqliteDatabase {
         let changes = self
             .conn
             .execute(
-                "UPDATE packages SET deleted_at = datetime('now')
+                "UPDATE packages SET deleted_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
                  WHERE id = ?1 AND deleted_at IS NULL",
                 [package_id],
             )

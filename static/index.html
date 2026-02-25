@@ -187,6 +187,29 @@ tr.history-row td { padding: 0; background: #fafafa; }
     return d.innerHTML;
   }
 
+  const dtfFull = new Intl.DateTimeFormat('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+    timeZoneName: 'short',
+  });
+  const dtfDate = new Intl.DateTimeFormat('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+  });
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return esc(iso);
+    return dtfFull.format(d);
+  }
+
+  function formatDateOnly(iso) {
+    if (!iso) return '';
+    const d = new Date(iso.length === 10 ? iso + 'T00:00:00' : iso);
+    if (isNaN(d.getTime())) return esc(iso);
+    return dtfDate.format(d);
+  }
+
   function render() {
     const f = filter.value;
     let data = f ? packages.filter(p => p.status === f) : packages.slice();
@@ -201,6 +224,7 @@ tr.history-row td { padding: 0; background: #fafafa; }
       return 0;
     });
 
+    const previouslyExpanded = expandedId;
     expandedId = null;
 
     // Update sort arrows
@@ -228,7 +252,7 @@ tr.history-row td { padding: 0; background: #fafafa; }
       <td><span class="badge ${badgeClass(p.status)}">${statusLabel(p.status)}</span>${p.status == "not_found" ? `<button class="btn-rescan" data-id="${p.id}" title="Rescan package">&#x21ba;</button>` : ''}</td>
       <td>${(() => { const s = parseSender(p.source_email_from); return s.email ? `<span title="${esc(s.email)}">${esc(s.name)}</span>` : esc(s.name); })()}</td>
       <td>${esc(p.last_known_location)}</td>
-      <td>${esc(p.created_at)}</td>
+      <td>${formatDate(p.created_at)}</td>
       <td><button class="btn-delete" data-id="${p.id}" title="Delete package">&#x2715;</button></td>
     </tr>`).join('');
 
@@ -258,6 +282,12 @@ tr.history-row td { padding: 0; background: #fafafa; }
           .catch(err => console.error('Failed to rescan package:', err));
       });
     });
+
+    // Re-expand previously expanded row after DOM rebuild
+    if (previouslyExpanded) {
+      const row = tbody.querySelector(`.pkg-row[data-id="${previouslyExpanded}"]`);
+      if (row) toggleHistory(row);
+    }
   }
 
   function collapseExpanded() {
@@ -295,7 +325,7 @@ tr.history-row td { padding: 0; background: #fafafa; }
         wrap.innerHTML = `<table><thead><tr>
           <th>Time</th><th>Status</th><th>Location</th><th>Description</th>
         </tr></thead><tbody>${entries.map(e => `<tr>
-          <td>${esc(e.checked_at)}</td>
+          <td>${formatDate(e.checked_at)}</td>
           <td><span class="badge ${badgeClass(e.status)}">${statusLabel(e.status)}</span></td>
           <td>${esc(e.last_known_location)}</td>
           <td>${esc(e.description)}</td>

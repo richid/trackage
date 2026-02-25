@@ -5,6 +5,7 @@ mod email_poller;
 mod extractors;
 mod imap_client;
 mod status_poller;
+mod util;
 mod web;
 
 use config::{load as config_load, validate as config_validate};

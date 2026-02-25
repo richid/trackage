@@ -1,6 +1,7 @@
 use super::{CourierClient, CourierStatus};
 use crate::config::UpsConfig;
 use crate::db::{Package, PackageStatus};
+use crate::util::parse_date_yyyymmdd;
 use anyhow::{Context, Result};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use std::sync::Mutex;
@@ -126,12 +127,12 @@ impl CourierClient for UpsClient {
             Some(code) => {
                 let mapped = Self::map_status_code(code);
 
-                // Extract estimated delivery date
+                // Extract estimated delivery date (API returns YYYYMMDD → YYYY-MM-DD)
                 let estimated_arrival_date = pkg["deliveryDate"]
                     .as_array()
                     .and_then(|dates| dates.first())
                     .and_then(|d| d["date"].as_str())
-                    .map(|s| s.to_string());
+                    .and_then(parse_date_yyyymmdd);
 
                 // Extract last known location from latest activity
                 let last_known_location = pkg["activity"]

@@ -1,6 +1,7 @@
 use super::{CourierClient, CourierStatus};
 use crate::config::UspsConfig;
 use crate::db::{Package, PackageStatus};
+use crate::util::format_rfc3339_utc;
 use anyhow::{Context, Result};
 use regex::Regex;
 use serde_json::json;
@@ -122,7 +123,7 @@ impl UspsClient {
                 hour = 0;
             }
 
-            return Some(format!("{year:04}-{month:02}-{day:02} {hour:02}:{minute:02}:00"));
+            return Some(format_rfc3339_utc(year, month, day, hour, minute, 0));
         }
 
         // Pattern 2: "Month Day, Year" with optional "at H:MM am/pm on"
@@ -157,7 +158,7 @@ impl UspsClient {
                 (0, 0)
             };
 
-            return Some(format!("{year:04}-{month:02}-{day:02} {hour:02}:{minute:02}:00"));
+            return Some(format_rfc3339_utc(year, month, day, hour, minute, 0));
         }
 
         None
