@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/richid/trackage/compare/0.1.3...0.2.0) (2026-02-25)
+
+### Features
+
+* Add rescan button to force refresh of package status ([92807b2](https://github.com/richid/trackage/commit/92807b2ea640af182024cf3bd4165e665863dffe))
+* Add web scraping fallback for UPS ([bf8af26](https://github.com/richid/trackage/commit/bf8af26b72e19fb075bb2a6f88fae3650d19df41))
+* Update web scraper for UPS, standardize on date formats ([8bf6dff](https://github.com/richid/trackage/commit/8bf6dfffb9d9550b5244a1ffd373dbf525c1244b))
+
+### Bug Fixes
+
+* Dedupe tracking numbers when extracting and validating ([078273f](https://github.com/richid/trackage/commit/078273f90aaecd1ff30fa20efbf576ffe5e80071))
+
 ## [0.1.3](https://github.com/richid/trackage/compare/0.1.2...0.1.3) (2026-02-24)
 
 ### Bug Fixes
