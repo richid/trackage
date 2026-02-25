@@ -15,15 +15,20 @@ pub fn extract_candidates(text: &str) -> Vec<String> {
     let re_spaced =
         Regex::new(r"\b\d{2,4}(?: \d{2,4}){3,}\b").expect("invalid spaced tracking regex");
 
+    let mut seen = std::collections::HashSet::new();
+
     for m in re_contiguous.find_iter(&uppercased) {
         let s = m.as_str().to_string();
-        if s.chars().any(|c| c.is_ascii_digit()) {
+        if s.chars().any(|c| c.is_ascii_digit()) && seen.insert(s.clone()) {
             results.push(s);
         }
     }
 
     for m in re_spaced.find_iter(&uppercased) {
-        results.push(m.as_str().to_string());
+        let s = m.as_str().to_string();
+        if seen.insert(s.clone()) {
+            results.push(s);
+        }
     }
 
     results
@@ -32,12 +37,14 @@ pub fn extract_candidates(text: &str) -> Vec<String> {
 /// Extracts candidate strings from text, validates each with the
 /// tracking-numbers crate, and returns only confirmed tracking numbers.
 pub fn extract_tracking_numbers(text: &str) -> Vec<TrackingResult> {
+    let mut seen = std::collections::HashSet::new();
     extract_candidates(text)
         .into_iter()
         .filter_map(|candidate| {
             let cleaned: String = candidate.chars().filter(|c| !c.is_whitespace()).collect();
             track(&cleaned)
         })
+        .filter(|result| seen.insert(result.tracking_number.clone()))
         .collect()
 }
 
