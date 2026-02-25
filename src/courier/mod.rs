@@ -1,5 +1,6 @@
 pub mod fedex;
 pub mod ups;
+pub mod ups_web;
 pub mod usps;
 
 use crate::db::Package;

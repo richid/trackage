@@ -11,9 +11,11 @@ check_interval_seconds = 30
 client_id = "your-fedex-client-id"
 client_secret = "your-fedex-client-secret"
 
-[courier.ups]
-client_id = "your-ups-client-id"
-client_secret = "your-ups-client-secret"
+# UPS API credentials are optional. When omitted, a credential-free web
+# fallback is used automatically to track UPS packages.
+# [courier.ups]
+# client_id = "your-ups-client-id"
+# client_secret = "your-ups-client-secret"
 
 [courier.usps]
 client_id = "your-usps-consumer-key"

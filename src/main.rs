@@ -77,8 +77,11 @@ fn main() {
         router.register(&courier::CourierCode::FedEx, Box::new(courier::fedex::FedexClient::new(fedex_config)));
     }
     if let Some(ref ups_config) = config.courier.ups {
-        info!("UPS courier client enabled");
+        info!("UPS courier client enabled (API)");
         router.register(&courier::CourierCode::UPS, Box::new(courier::ups::UpsClient::new(ups_config)));
+    } else {
+        info!("UPS courier client enabled (web fallback)");
+        router.register(&courier::CourierCode::UPS, Box::new(courier::ups_web::UpsWebClient::new()));
     }
     if let Some(ref usps_config) = config.courier.usps {
         info!("USPS courier client enabled");

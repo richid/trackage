@@ -41,6 +41,7 @@ impl FromStr for PackageStatus {
     }
 }
 
+#[allow(dead_code)]
 pub struct Package {
     pub id: i64,
     pub tracking_number: String,
