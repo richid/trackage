@@ -143,13 +143,12 @@ fn default_folder() -> String {
 }
 
 /// Load configuration from config.toml and environment variables
-pub fn load() -> Config {
+pub fn load() -> Result<Config, figment::Error> {
     Figment::new()
         .merge(Toml::file("config.toml"))
         // Use double-underscore nesting for snake_case keys
         .merge(Env::prefixed("TRACKAGE_").split("__"))
         .extract()
-        .expect("Failed to load configuration")
 }
 
 /// Validate configuration and return a user-friendly error

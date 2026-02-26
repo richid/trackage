@@ -25,10 +25,17 @@ fn main() {
 
     info!("trackage starting");
 
-    let config = config_load();
+    let config = match config_load() {
+        Ok(config) => config,
+        Err(err) => {
+            error!("Failed to load configuration: {err}");
+            error!("Provide a config.toml in the working directory or set TRACKAGE_ environment variables");
+            std::process::exit(1);
+        }
+    };
 
     if let Err(err) = config_validate(&config) {
-        eprintln!("Configuration error: {err}");
+        error!("Configuration error: {err}");
         std::process::exit(1);
     }
 
