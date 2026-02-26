@@ -14,9 +14,38 @@ Rust-based application to automatically keep tabs on your incoming packages. Tra
 cargo build --release
 ```
 
+No system dependencies (like OpenSSL) are required — all TLS is handled by [rustls](https://github.com/rustls/rustls), a pure-Rust TLS implementation.
+
 ## Configuration
 
-Copy `config.toml.sample` to `config.toml` and fill in your values. All settings can also be provided via environment variables prefixed with `TRACKAGE_`, using `__` as the nesting separator (e.g. `TRACKAGE_EMAIL__SERVER`).
+Copy `config.toml.sample` to `config.toml` and fill in your values.
+
+### Environment Variables
+
+Any config option can be set via environment variables prefixed with `TRACKAGE_`. Use `__` (double underscore) to represent TOML section nesting. The variable name is case-insensitive.
+
+| TOML key | Environment variable |
+|---|---|
+| `email.server` | `TRACKAGE_EMAIL__SERVER` |
+| `email.password` | `TRACKAGE_EMAIL__PASSWORD` |
+| `courier.fedex.client_secret` | `TRACKAGE_COURIER__FEDEX__CLIENT_SECRET` |
+| `database.path` | `TRACKAGE_DATABASE__PATH` |
+
+Environment variables override values from `config.toml`, making them useful for secrets you don't want stored on disk:
+
+```sh
+TRACKAGE_EMAIL__PASSWORD=my-secret cargo run
+```
+
+Or with Docker:
+
+```sh
+docker run -d \
+  -v /path/to/config:/config \
+  -e TRACKAGE_EMAIL__PASSWORD=my-secret \
+  -p 3000:3000 \
+  ghcr.io/user/trackage:latest
+```
 
 ### Email (required)
 
@@ -72,4 +101,25 @@ Logging is controlled via the `RUST_LOG` environment variable (defaults to `info
 
 ```sh
 RUST_LOG=debug cargo run
+```
+
+### Docker
+
+The Docker image uses a `/config` volume as its working directory. Place your `config.toml` there and the SQLite database will be created alongside it automatically.
+
+```sh
+docker run -d \
+  -v /path/to/config:/config \
+  -p 3000:3000 \
+  ghcr.io/user/trackage:latest
+```
+
+The container runs as UID 65532 by default. To match your host directory ownership, use `--user`:
+
+```sh
+docker run -d \
+  --user "$(id -u)" \
+  -v /path/to/config:/config \
+  -p 3000:3000 \
+  ghcr.io/user/trackage:latest
 ```
