@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/richid/trackage/compare/0.2.0...0.3.0) (2026-02-26)
+
+### Features
+
+* Build for both amd64 and arm64 ([db91732](https://github.com/richid/trackage/commit/db91732a7713dd0f3f87c7ba12666ae226376296))
+* Use rustls over openssl, add config to Dockerfile ([4b15e21](https://github.com/richid/trackage/commit/4b15e21c98ebb880418e8c4dea70e329628caebf))
+
+### Bug Fixes
+
+* Improve error handling when loading config ([53ab4ad](https://github.com/richid/trackage/commit/53ab4adac2fd1a617fb8b2b6197a6d0134456f76))
+
 ## [0.2.0](https://github.com/richid/trackage/compare/0.1.3...0.2.0) (2026-02-25)
 
 ### Features
