@@ -33,7 +33,7 @@ impl EmailPoller {
     }
 
     fn poll_once(&mut self) {
-        let last_seen_uid = match self.db.get_last_seen_uid() {
+        let last_seen_uid = match self.db.get_last_seen_uid(&self.config.folder) {
             Ok(uid) => uid,
             Err(err) => {
                 error!(error = %err, "Failed to read last_seen_uid from database");
@@ -71,7 +71,7 @@ impl EmailPoller {
             self.process_message(msg);
         }
 
-        if let Err(err) = self.db.set_last_seen_uid(max_uid) {
+        if let Err(err) = self.db.set_last_seen_uid(&self.config.folder, max_uid) {
             error!(error = %err, "Failed to save last_seen_uid to database");
         }
 

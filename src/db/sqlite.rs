@@ -57,16 +57,32 @@ impl SqliteDatabase {
 }
 
 impl Database for SqliteDatabase {
-    fn get_last_seen_uid(&self) -> Result<u32> {
+    fn get_last_seen_uid(&self, folder: &str) -> Result<u32> {
+        let scoped_key = format!("last_seen_uid:{folder}");
+
         let result: Option<String> = self
             .conn
             .query_row(
-                "SELECT value FROM metadata WHERE key = 'last_seen_uid'",
-                [],
+                "SELECT value FROM metadata WHERE key = ?1",
+                [&scoped_key],
                 |row| row.get(0),
             )
             .optional()
             .context("Failed to query last_seen_uid")?;
+
+        // Fall back to the legacy unscoped key for backwards compatibility
+        let result = match result {
+            Some(val) => Some(val),
+            None => self
+                .conn
+                .query_row(
+                    "SELECT value FROM metadata WHERE key = 'last_seen_uid'",
+                    [],
+                    |row| row.get(0),
+                )
+                .optional()
+                .context("Failed to query legacy last_seen_uid")?,
+        };
 
         match result {
             Some(val) => val
@@ -76,12 +92,14 @@ impl Database for SqliteDatabase {
         }
     }
 
-    fn set_last_seen_uid(&mut self, uid: u32) -> Result<()> {
+    fn set_last_seen_uid(&mut self, folder: &str, uid: u32) -> Result<()> {
+        let scoped_key = format!("last_seen_uid:{folder}");
+
         self.conn
             .execute(
-                "INSERT INTO metadata (key, value) VALUES ('last_seen_uid', ?1)
+                "INSERT INTO metadata (key, value) VALUES (?1, ?2)
                  ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                [uid.to_string()],
+                rusqlite::params![scoped_key, uid.to_string()],
             )
             .context("Failed to update last_seen_uid")?;
 

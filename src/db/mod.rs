@@ -83,11 +83,11 @@ pub struct NewPackage {
 }
 
 pub trait Database: Send {
-    /// Get the highest IMAP UID we have processed.
-    fn get_last_seen_uid(&self) -> Result<u32>;
+    /// Get the highest IMAP UID we have processed for the given folder.
+    fn get_last_seen_uid(&self, folder: &str) -> Result<u32>;
 
-    /// Update the highest IMAP UID we have processed.
-    fn set_last_seen_uid(&mut self, uid: u32) -> Result<()>;
+    /// Update the highest IMAP UID we have processed for the given folder.
+    fn set_last_seen_uid(&mut self, folder: &str, uid: u32) -> Result<()>;
 
     /// Insert a package if the tracking number doesn't already exist.
     /// Returns `true` if a new row was inserted.
