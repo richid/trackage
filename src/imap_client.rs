@@ -21,6 +21,7 @@ pub struct ParsedMessage {
 
 pub struct ImapClient {
     session: imap::Session<Box<dyn imap::ImapConnection>>,
+    uid_next: Option<u32>,
 }
 
 impl ImapClient {
@@ -38,13 +39,22 @@ impl ImapClient {
             .map_err(|e| e.0)
             .context("Failed to authenticate to IMAP server")?;
 
-        session
+        let mailbox = session
             .select(&config.folder)
             .context("Failed to select IMAP folder")?;
 
-        info!(folder = %config.folder, "IMAP folder selected");
+        let uid_next = mailbox.uid_next;
 
-        Ok(Self { session })
+        info!(folder = %config.folder, uid_next = ?uid_next, "IMAP folder selected");
+
+        Ok(Self { session, uid_next })
+    }
+
+    /// Returns the `UIDNEXT` value from the mailbox SELECT response.
+    /// This is the next UID the server will assign; `uid_next - 1` is the
+    /// highest existing UID.
+    pub fn uid_next(&self) -> Option<u32> {
+        self.uid_next
     }
 
     /// Fetch all messages with UIDs greater than `last_seen_uid`.

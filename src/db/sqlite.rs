@@ -70,20 +70,6 @@ impl Database for SqliteDatabase {
             .optional()
             .context("Failed to query last_seen_uid")?;
 
-        // Fall back to the legacy unscoped key for backwards compatibility
-        let result = match result {
-            Some(val) => Some(val),
-            None => self
-                .conn
-                .query_row(
-                    "SELECT value FROM metadata WHERE key = 'last_seen_uid'",
-                    [],
-                    |row| row.get(0),
-                )
-                .optional()
-                .context("Failed to query legacy last_seen_uid")?,
-        };
-
         match result {
             Some(val) => val
                 .parse::<u32>()

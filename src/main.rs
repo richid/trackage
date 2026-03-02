@@ -69,16 +69,6 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let email_poller = email_poller::EmailPoller::new(
-        config.email,
-        Box::new(email_db),
-        Arc::clone(&running),
-    );
-    let email_handle = std::thread::Builder::new()
-        .name("email-poller".into())
-        .spawn(move || email_poller.run())
-        .expect("Failed to spawn email poller thread");
-
     let mut router = courier::CourierRouter::new();
     if let Some(ref fedex_config) = config.courier.fedex {
         info!("FedEx courier client enabled");
@@ -95,6 +85,16 @@ fn main() {
         info!("USPS courier client enabled");
         router.register(&courier::CourierCode::USPS, Box::new(courier::usps::UspsClient::new(usps_config)));
     }
+
+    let email_poller = email_poller::EmailPoller::new(
+        config.email,
+        Box::new(email_db),
+        Arc::clone(&running),
+    );
+    let email_handle = std::thread::Builder::new()
+        .name("email-poller".into())
+        .spawn(move || email_poller.run())
+        .expect("Failed to spawn email poller thread");
 
     let status_poller = status_poller::StatusPoller::new(
         config.status,

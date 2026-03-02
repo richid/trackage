@@ -41,7 +41,7 @@ impl EmailPoller {
             }
         };
 
-        info!(last_seen_uid, "Connecting to server");
+        info!(last_seen_uid, server = self.config.server, folder = self.config.folder, "Connecting to server");
 
         let mut client = match ImapClient::connect(&self.config) {
             Ok(client) => client,
@@ -49,6 +49,26 @@ impl EmailPoller {
                 error!(error = %err, "IMAP connection failed");
                 return;
             }
+        };
+
+        let last_seen_uid = if last_seen_uid == 0 {
+            if let Some(uid_next) = client.uid_next() {
+                let seeded = uid_next.saturating_sub(1);
+                info!(
+                    uid_next,
+                    seeded_uid = seeded,
+                    folder = self.config.folder,
+                    "No previous UID for folder, starting from current mailbox position"
+                );
+                if let Err(err) = self.db.set_last_seen_uid(&self.config.folder, seeded) {
+                    error!(error = %err, "Failed to save seeded last_seen_uid to database");
+                }
+                seeded
+            } else {
+                last_seen_uid
+            }
+        } else {
+            last_seen_uid
         };
 
         let messages = match client.fetch_messages_since_uid(last_seen_uid) {
