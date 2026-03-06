@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/richid/trackage/compare/0.3.0...0.4.0) (2026-03-06)
+
+### Features
+
+* Scope IMAP uids to folder ([d3498a8](https://github.com/richid/trackage/commit/d3498a8a509726afaddd8ae48798d025d69f2e85))
+* Start from new messages when using new folder ([cdf1431](https://github.com/richid/trackage/commit/cdf1431e41ecb40c65bbf959cf4a1dbb9a7c39c8))
+
 ## [0.3.0](https://github.com/richid/trackage/compare/0.2.0...0.3.0) (2026-02-26)
 
 ### Features
