@@ -107,19 +107,63 @@ RUST_LOG=debug cargo run
 
 The Docker image uses a `/config` volume as its working directory. Place your `config.toml` there and the SQLite database will be created alongside it automatically.
 
+| Parameter | Function |
+|-----------|----------|
+| `-p 3000:3000` | Web UI port (when `web.enabled = true`) |
+| `-v /path/to/config:/config` | Mount directory containing `config.toml` and `trackage.db` |
+| `-e TRACKAGE_EMAIL__PASSWORD` | IMAP password |
+| `-e TRACKAGE_COURIER__FEDEX__CLIENT_SECRET` | FedEx API client secret |
+| `-e TRACKAGE_COURIER__UPS__CLIENT_SECRET` | UPS API client secret |
+| `-e TRACKAGE_COURIER__USPS__CLIENT_SECRET` | USPS API client secret |
+
+#### Docker CLI
+
 ```sh
 docker run -d \
-  -v /path/to/config:/config \
+  --name=trackage \
+  -v /path/to/trackage:/config \
   -p 3000:3000 \
-  ghcr.io/user/trackage:latest
+  --restart unless-stopped \
+  ghcr.io/richid/trackage:latest
 ```
 
-The container runs as UID 65532 by default. To match your host directory ownership, use `--user`:
+The container runs as UID 65532 (`nonroot`) by default. To match your host directory ownership, use `--user`:
 
 ```sh
 docker run -d \
+  --name=trackage \
   --user "$(id -u)" \
-  -v /path/to/config:/config \
+  -v /path/to/trackage:/config \
   -p 3000:3000 \
-  ghcr.io/user/trackage:latest
+  --restart unless-stopped \
+  ghcr.io/richid/trackage:latest
 ```
+
+#### Docker Compose
+
+```yaml
+services:
+  trackage:
+    image: ghcr.io/richid/trackage:latest
+    container_name: trackage
+    volumes:
+      - /path/to/trackage:/config
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+```
+
+#### Podman (rootless)
+
+Use `--userns=keep-id` to map your host UID into the container so file ownership works without `chown`:
+
+```sh
+podman run -d \
+  --name=trackage \
+  --userns=keep-id \
+  -v /path/to/trackage:/config \
+  -p 3000:3000 \
+  ghcr.io/richid/trackage:latest
+```
+
+On SELinux systems, add the `:Z` suffix to the volume mount (`/path/to/trackage:/config:Z`).
